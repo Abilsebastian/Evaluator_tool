@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation"
 import { ClipboardList, LogOut, Home } from "lucide-react"
 import { auth } from "@/lib/firebase-config"
+import { useLanguage } from "@/lib/language-context"
+import LanguageSwitcher from "./language-switcher"
 
 interface HeaderProps {
   user: {
@@ -15,6 +17,7 @@ interface HeaderProps {
 
 export default function Header({ user, onLogout }: HeaderProps) {
   const router = useRouter()
+  const { t } = useLanguage()
 
   // Determine the heading based on the current route
   const getHeading = () => {
@@ -24,13 +27,13 @@ export default function Header({ user, onLogout }: HeaderProps) {
 
     switch (pathname) {
       case "/admin-dashboard":
-        return "Admin Dashboard"
+        return t("adminDashboard")
       case "/create-project":
-        return "Create Project"
+        return t("createNewProject")
       case "/user-dashboard":
         return "User Dashboard"
       default:
-        return "Evaluator Tool"
+        return "LAPAS Evaluator Tool"
     }
   }
 
@@ -57,12 +60,14 @@ export default function Header({ user, onLogout }: HeaderProps) {
         </div>
 
         <div className="flex items-center space-x-4">
+          <LanguageSwitcher />
+
           <button
             onClick={() => router.push("/landing")}
             className="flex items-center space-x-1 text-sm text-gray-700 hover:text-blue-600 transition-colors"
           >
             <Home className="h-4 w-4" />
-            <span>Home</span>
+            <span>{t("home")}</span>
           </button>
 
           {user && (
@@ -73,7 +78,7 @@ export default function Header({ user, onLogout }: HeaderProps) {
                 className="flex items-center space-x-1 text-sm text-gray-700 hover:text-red-600 transition-colors"
               >
                 <LogOut className="h-4 w-4" />
-                <span>Logout</span>
+                <span>{t("logout")}</span>
               </button>
             </>
           )}

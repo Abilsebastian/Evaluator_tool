@@ -1,4 +1,10 @@
+"use client"
+
+import { useLanguage } from "@/lib/language-context"
+
 export default function Footer() {
+  const { t } = useLanguage()
+
   return (
     <footer className="bg-gray-100 border-t border-gray-200 mt-auto">
       <div className="container mx-auto px-4 py-6">

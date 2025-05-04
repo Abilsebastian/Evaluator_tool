@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { db, auth } from "@/lib/firebase-config"
 import { collection, getDocs, addDoc, doc, getDoc, deleteDoc } from "firebase/firestore"
 import { ClipboardCheck, PlusCircle, AlertCircle, CheckCircle, Clock, AlertTriangle, Trash2 } from "lucide-react"
+import { useLanguage } from "@/lib/language-context"
 
 interface Project {
   id: string
@@ -45,6 +46,7 @@ interface LandingPageProps {
 
 export default function LandingPage({ user }: LandingPageProps) {
   const router = useRouter()
+  const { t } = useLanguage()
   const [projectData, setProjectData] = useState({
     projectName: "",
     projectDescription: "",
@@ -56,6 +58,11 @@ export default function LandingPage({ user }: LandingPageProps) {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setProjectData({ ...projectData, [e.target.name]: e.target.value })
+  }
+
+  // Function to redirect to the evaluation form page
+  const handleEvaluate = (projectId: string) => {
+    router.push(`/evaluation-form/${projectId}`)
   }
 
   // Function to store project data in Firestore
@@ -226,11 +233,9 @@ export default function LandingPage({ user }: LandingPageProps) {
       } catch (error: any) {
         console.error("Error fetching projects:", error)
         if (error.code === "permission-denied") {
-          setError(
-            "You don't have permission to access these projects. Please check with your administrator for direct links to your evaluation forms.",
-          )
+          setError(t("permissionError"))
         } else {
-          setError(`Error loading projects: ${error.message}`)
+          setError(`${t("error")}: ${error.message}`)
         }
       } finally {
         setLoading(false)
@@ -238,7 +243,7 @@ export default function LandingPage({ user }: LandingPageProps) {
     }
 
     fetchProjects()
-  }, [user])
+  }, [user, t])
 
   // Safe way to copy link to clipboard
   const handleCopyLink = (projectId: string) => {
@@ -275,8 +280,8 @@ export default function LandingPage({ user }: LandingPageProps) {
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h2 className="text-xl font-bold text-gray-800 mb-2">Administrator Tools</h2>
-              <p className="text-gray-600">Access administrative features and project management tools</p>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">{t("adminTools")}</h2>
+              <p className="text-gray-600">{t("adminToolsDesc")}</p>
             </div>
             <div className="flex flex-wrap gap-3">
               <button
@@ -284,14 +289,14 @@ export default function LandingPage({ user }: LandingPageProps) {
                 onClick={() => router.push("/admin-dashboard")}
               >
                 <ClipboardCheck className="h-5 w-5" />
-                <span>Admin Dashboard</span>
+                <span>{t("adminDashboard")}</span>
               </button>
               <button
                 className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
                 onClick={() => router.push("/results-dashboard")}
               >
                 <CheckCircle className="h-5 w-5" />
-                <span>Results Dashboard</span>
+                <span>{t("resultsDashboard")}</span>
               </button>
             </div>
           </div>
@@ -300,13 +305,11 @@ export default function LandingPage({ user }: LandingPageProps) {
 
       <main>
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">Welcome!</h2>
+          <h2 className="text-xl font-bold text-gray-800 mb-4">{t("welcome")}</h2>
           {user?.role === "admin" ? (
-            <p className="text-gray-600">As an administrator, you can manage all projects and evaluations.</p>
+            <p className="text-gray-600">{t("adminWelcome")}</p>
           ) : (
-            <p className="text-gray-600">
-              Below you can see all projects assigned to you for evaluation. Click on the project name to view details.
-            </p>
+            <p className="text-gray-600">{t("userWelcome")}</p>
           )}
         </div>
 
@@ -314,14 +317,14 @@ export default function LandingPage({ user }: LandingPageProps) {
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-gray-800">
-              {user?.role === "admin" ? "All Projects" : "Your Assigned Projects"}
+              {user?.role === "admin" ? t("allProjects") : t("yourAssignedProjects")}
             </h3>
 
             {/* Status filter */}
             {assignedProjects.length > 0 && (
               <div className="flex items-center gap-2">
                 <label htmlFor="status-filter" className="text-sm text-gray-600">
-                  Filter by status:
+                  {t("filterByStatus")}
                 </label>
                 <select
                   id="status-filter"
@@ -329,10 +332,10 @@ export default function LandingPage({ user }: LandingPageProps) {
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="all">All</option>
-                  <option value="pending">Pending</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="completed">Completed</option>
+                  <option value="all">{t("all")}</option>
+                  <option value="pending">{t("pending")}</option>
+                  <option value="in_progress">{t("inProgress")}</option>
+                  <option value="completed">{t("completed")}</option>
                 </select>
               </div>
             )}
@@ -345,11 +348,8 @@ export default function LandingPage({ user }: LandingPageProps) {
                 <p>{error}</p>
                 {error.includes("permission") && (
                   <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-md">
-                    <h4 className="font-medium text-blue-800 mb-2">How to Access Your Evaluations</h4>
-                    <p className="text-sm text-blue-700">
-                      If you're an evaluator, your administrator will provide you with direct links to your evaluation
-                      forms. Please check your email or contact your administrator for these links.
-                    </p>
+                    <h4 className="font-medium text-blue-800 mb-2">{t("howToAccess")}</h4>
+                    <p className="text-sm text-blue-700">{t("accessWays")}</p>
                   </div>
                 )}
               </div>
@@ -379,7 +379,7 @@ export default function LandingPage({ user }: LandingPageProps) {
                                 : "bg-gray-100 text-gray-800"
                           }`}
                         >
-                          {project.status || "pending"}
+                          {t(project.status || "pending")}
                         </span>
                       </div>
                     </div>
@@ -390,7 +390,7 @@ export default function LandingPage({ user }: LandingPageProps) {
 
                     {project.userRole && (
                       <p className="text-xs text-gray-500 mb-4">
-                        Your role: <span className="font-medium">{project.userRole}</span>
+                        {t("yourRole")} <span className="font-medium">{project.userRole}</span>
                       </p>
                     )}
 
@@ -401,7 +401,7 @@ export default function LandingPage({ user }: LandingPageProps) {
                           onClick={() => router.push(`/evaluation-form/${project.id}`)}
                           className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm"
                         >
-                          {project.status === "completed" ? "View Submission" : "Continue Evaluation"}
+                          {project.status === "completed" ? t("viewSubmission") : t("continueEvaluation")}
                         </button>
                       )}
 
@@ -412,7 +412,7 @@ export default function LandingPage({ user }: LandingPageProps) {
                             onClick={() => handleCopyLink(project.id)}
                             className="flex items-center gap-1 bg-green-50 text-green-600 px-3 py-2 rounded-md hover:bg-green-100 transition-colors text-sm"
                           >
-                            <span>Copy Link</span>
+                            <span>{t("copyLink")}</span>
                           </button>
                           <button
                             onClick={() => handleDeleteProject(project.id)}
@@ -420,7 +420,7 @@ export default function LandingPage({ user }: LandingPageProps) {
                             title="Delete project"
                           >
                             <Trash2 className="h-4 w-4" />
-                            <span>Delete</span>
+                            <span>{t("delete")}</span>
                           </button>
                         </div>
                       )}
@@ -435,31 +435,26 @@ export default function LandingPage({ user }: LandingPageProps) {
                 <p className="text-gray-500">
                   {statusFilter === "all"
                     ? user?.role === "admin"
-                      ? "No projects found. Create your first project below."
-                      : "You don't have any projects assigned to you yet."
-                    : `You don't have any ${statusFilter.replace("_", " ")} evaluations.`}
+                      ? t("noProjectsAdmin")
+                      : t("noProjectsUser")
+                    : t("noFilteredProjects", { status: t(statusFilter) })}
                 </p>
               </div>
 
               {user?.role !== "admin" && (
                 <div className="p-4 bg-blue-50 border border-blue-100 rounded-md">
-                  <h4 className="font-medium text-blue-800 mb-2">How to Access Your Evaluations</h4>
+                  <h4 className="font-medium text-blue-800 mb-2">{t("howToAccess")}</h4>
                   <div className="space-y-3 text-sm text-blue-700">
-                    <p>There are two ways to access your evaluation forms:</p>
+                    <p>{t("accessWays")}</p>
                     <ol className="list-decimal list-inside space-y-2 ml-2">
                       <li>
-                        <strong>Direct links:</strong> Your administrator may send you direct links to your evaluation
-                        forms via email.
+                        <strong>{t("directLinks")}</strong>
                       </li>
                       <li>
-                        <strong>Dashboard access:</strong> Once an administrator assigns you to a project, it will
-                        appear here automatically.
+                        <strong>{t("dashboardAccess")}</strong>
                       </li>
                     </ol>
-                    <p className="mt-3 pt-3 border-t border-blue-200">
-                      If you believe you should have access to a project that isn't showing up here, please contact your
-                      administrator.
-                    </p>
+                    <p className="mt-3 pt-3 border-t border-blue-200">{t("contactAdmin")}</p>
                   </div>
                 </div>
               )}
@@ -468,19 +463,19 @@ export default function LandingPage({ user }: LandingPageProps) {
 
           {assignedProjects.length > 0 && (
             <div className="mt-6 p-4 bg-blue-50 border border-blue-100 rounded-md">
-              <h4 className="font-medium text-blue-800 mb-2">Evaluation Status Legend</h4>
+              <h4 className="font-medium text-blue-800 mb-2">{t("statusLegend")}</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm text-gray-700">Pending: You haven't started yet</span>
+                  <span className="text-sm text-gray-700">{t("pendingDesc")}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-yellow-500" />
-                  <span className="text-sm text-gray-700">In Progress: You've started but not submitted</span>
+                  <span className="text-sm text-gray-700">{t("inProgressDesc")}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-gray-700">Completed: You've submitted your evaluation</span>
+                  <span className="text-sm text-gray-700">{t("completedDesc")}</span>
                 </div>
               </div>
             </div>
@@ -490,7 +485,7 @@ export default function LandingPage({ user }: LandingPageProps) {
         {/* Project creation form for admins */}
         {user?.role === "admin" && (
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Create a New Project</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">{t("createNewProject")}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <input
@@ -498,7 +493,7 @@ export default function LandingPage({ user }: LandingPageProps) {
                   name="projectName"
                   value={projectData.projectName}
                   onChange={handleInputChange}
-                  placeholder="Project Name"
+                  placeholder={t("projectName")}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -507,7 +502,7 @@ export default function LandingPage({ user }: LandingPageProps) {
                   name="projectDescription"
                   value={projectData.projectDescription}
                   onChange={handleInputChange}
-                  placeholder="Project Description"
+                  placeholder={t("projectDescription")}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={1}
                 />
@@ -519,7 +514,7 @@ export default function LandingPage({ user }: LandingPageProps) {
                 className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
               >
                 <PlusCircle className="h-5 w-5" />
-                <span>Create Project</span>
+                <span>{t("createProject")}</span>
               </button>
             </div>
           </div>
