@@ -5,8 +5,8 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { db, auth } from "@/lib/firebase-config"
-import { collection, getDocs, addDoc, doc, getDoc } from "firebase/firestore"
-import { ClipboardCheck, PlusCircle, AlertCircle, CheckCircle, Clock, AlertTriangle } from "lucide-react"
+import { collection, getDocs, addDoc, doc, getDoc, deleteDoc } from "firebase/firestore"
+import { ClipboardCheck, PlusCircle, AlertCircle, CheckCircle, Clock, AlertTriangle, Trash2 } from "lucide-react"
 
 interface Project {
   id: string
@@ -58,11 +58,6 @@ export default function LandingPage({ user }: LandingPageProps) {
     setProjectData({ ...projectData, [e.target.name]: e.target.value })
   }
 
-  // Function to redirect to the evaluation form page
-  const handleEvaluate = (projectId: string) => {
-    router.push(`/evaluation-form/${projectId}`)
-  }
-
   // Function to store project data in Firestore
   const handleCreateProject = async () => {
     if (user?.role === "admin") {
@@ -88,6 +83,40 @@ export default function LandingPage({ user }: LandingPageProps) {
       }
     } else {
       alert("You don't have permission to create a project.")
+    }
+  }
+
+  const handleDeleteProject = async (projectId: string) => {
+    if (user?.role === "admin") {
+      // Show confirmation dialog
+      const confirmDelete = window.confirm(
+        "Are you sure you want to delete this project? This action cannot be undone.",
+      )
+
+      if (confirmDelete) {
+        try {
+          if (!auth.currentUser) {
+            throw new Error("User not authenticated")
+          }
+
+          // Delete the project from Firestore
+          await deleteDoc(doc(db, "projects", projectId))
+
+          // Update the UI by removing the deleted project
+          setAssignedProjects((prevProjects) => prevProjects.filter((project) => project.id !== projectId))
+
+          alert("Project deleted successfully!")
+        } catch (error: any) {
+          console.error("Error deleting project:", error)
+          if (error.code === "permission-denied") {
+            alert("You don't have permission to delete projects. Please contact your administrator.")
+          } else {
+            alert(`Failed to delete project: ${error.message}`)
+          }
+        }
+      }
+    } else {
+      alert("You don't have permission to delete projects.")
     }
   }
 
@@ -241,17 +270,33 @@ export default function LandingPage({ user }: LandingPageProps) {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <header className="mb-8">
-        {user?.role === "admin" && (
-          <button
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-            onClick={() => router.push("/admin-dashboard")}
-          >
-            <ClipboardCheck className="h-5 w-5" />
-            <span>Admin Dashboard</span>
-          </button>
-        )}
-      </header>
+      {/* Admin Dashboard Button - Repositioned at the top */}
+      {user?.role === "admin" && (
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">Administrator Tools</h2>
+              <p className="text-gray-600">Access administrative features and project management tools</p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                onClick={() => router.push("/admin-dashboard")}
+              >
+                <ClipboardCheck className="h-5 w-5" />
+                <span>Admin Dashboard</span>
+              </button>
+              <button
+                className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
+                onClick={() => router.push("/results-dashboard")}
+              >
+                <CheckCircle className="h-5 w-5" />
+                <span>Results Dashboard</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main>
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
@@ -260,8 +305,7 @@ export default function LandingPage({ user }: LandingPageProps) {
             <p className="text-gray-600">As an administrator, you can manage all projects and evaluations.</p>
           ) : (
             <p className="text-gray-600">
-              Below you can see all projects assigned to you for evaluation. Click on "Evaluate" to start or continue
-              your evaluation.
+              Below you can see all projects assigned to you for evaluation. Click on the project name to view details.
             </p>
           )}
         </div>
@@ -274,7 +318,7 @@ export default function LandingPage({ user }: LandingPageProps) {
             </h3>
 
             {/* Status filter */}
-            {!user?.role === "admin" && assignedProjects.length > 0 && (
+            {assignedProjects.length > 0 && (
               <div className="flex items-center gap-2">
                 <label htmlFor="status-filter" className="text-sm text-gray-600">
                   Filter by status:
@@ -314,6 +358,77 @@ export default function LandingPage({ user }: LandingPageProps) {
             <div className="flex justify-center items-center h-32">
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
             </div>
+          ) : filteredProjects.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredProjects.map((project) => (
+                <div
+                  key={project.id}
+                  className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <div className="p-4">
+                    <div className="flex justify-between items-start">
+                      <h4 className="text-lg font-medium text-gray-800 mb-2">{project.projectName}</h4>
+                      <div className="flex items-center">
+                        {getStatusIcon(project.status)}
+                        <span
+                          className={`ml-1 text-xs px-2 py-1 rounded-full ${
+                            project.status === "completed"
+                              ? "bg-green-100 text-green-800"
+                              : project.status === "in_progress"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {project.status || "pending"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {project.projectDescription && (
+                      <p className="text-sm text-gray-600 mb-3">{project.projectDescription}</p>
+                    )}
+
+                    {project.userRole && (
+                      <p className="text-xs text-gray-500 mb-4">
+                        Your role: <span className="font-medium">{project.userRole}</span>
+                      </p>
+                    )}
+
+                    <div className="flex justify-between items-center">
+                      {/* For non-admin users who are evaluators */}
+                      {user?.role !== "admin" && (
+                        <button
+                          onClick={() => router.push(`/evaluation-form/${project.id}`)}
+                          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm"
+                        >
+                          {project.status === "completed" ? "View Submission" : "Continue Evaluation"}
+                        </button>
+                      )}
+
+                      {/* For admin users */}
+                      {user?.role === "admin" && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleCopyLink(project.id)}
+                            className="flex items-center gap-1 bg-green-50 text-green-600 px-3 py-2 rounded-md hover:bg-green-100 transition-colors text-sm"
+                          >
+                            <span>Copy Link</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProject(project.id)}
+                            className="flex items-center gap-1 bg-red-50 text-red-600 px-3 py-2 rounded-md hover:bg-red-100 transition-colors text-sm"
+                            title="Delete project"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="bg-gray-50 border border-gray-200 rounded-md p-6">
               <div className="text-center mb-4">
@@ -351,7 +466,7 @@ export default function LandingPage({ user }: LandingPageProps) {
             </div>
           )}
 
-          {!user?.role === "admin" && assignedProjects.length > 0 && (
+          {assignedProjects.length > 0 && (
             <div className="mt-6 p-4 bg-blue-50 border border-blue-100 rounded-md">
               <h4 className="font-medium text-blue-800 mb-2">Evaluation Status Legend</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

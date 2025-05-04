@@ -6,8 +6,34 @@ import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { db, auth } from "@/lib/firebase-config"
 import { collection, doc, getDoc, query, where, getDocs, setDoc } from "firebase/firestore"
-import { PlusCircle, Save, Trash2, Plus, Users, ClipboardList, AlertCircle } from "lucide-react"
+import {
+  PlusCircle,
+  Save,
+  Trash2,
+  Plus,
+  Users,
+  ClipboardList,
+  AlertCircle,
+  FileText,
+  FilePlus,
+  Copy,
+  ArrowLeft,
+} from "lucide-react"
 
+// Default empty template for starting from scratch
+const emptyTemplate = {
+  section: "New Section",
+  weight: 0.2,
+  criteria: [
+    {
+      description: "New criterion",
+      maxRating: 5,
+      rating: 0,
+    },
+  ],
+}
+
+// Default evaluation template with predefined sections
 const defaultEvaluationTable = [
   {
     section: "Project purpose and relevance",
@@ -22,6 +48,54 @@ const defaultEvaluationTable = [
         description: "The target group is meaningfully involved in the project",
         maxRating: 5,
         rating: 5,
+      },
+    ],
+  },
+  {
+    section: "Project implementation",
+    weight: 0.3,
+    criteria: [
+      {
+        description: "Clear and realistic implementation plan",
+        maxRating: 5,
+        rating: 0,
+      },
+      {
+        description: "Appropriate resource allocation",
+        maxRating: 5,
+        rating: 0,
+      },
+    ],
+  },
+  {
+    section: "Project impact",
+    weight: 0.3,
+    criteria: [
+      {
+        description: "Expected outcomes are clearly defined",
+        maxRating: 5,
+        rating: 0,
+      },
+      {
+        description: "Sustainability of project results",
+        maxRating: 5,
+        rating: 0,
+      },
+    ],
+  },
+  {
+    section: "Budget",
+    weight: 0.2,
+    criteria: [
+      {
+        description: "Cost-effectiveness of the proposed budget",
+        maxRating: 5,
+        rating: 0,
+      },
+      {
+        description: "Clarity and detail of the budget",
+        maxRating: 5,
+        rating: 0,
       },
     ],
   },
@@ -66,11 +140,14 @@ export default function CreateProject() {
   const [initialized, setInitialized] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [currentUser, setCurrentUser] = useState<any>(null)
+  const [creationMode, setCreationMode] = useState<"template" | "scratch" | null>(null)
+  const [step, setStep] = useState<"select" | "details" | "evaluators" | "criteria">("select")
 
   // Memoize the search params to prevent re-renders
   const id = searchParams?.get("id")
   const name = searchParams?.get("name")
   const templateParam = searchParams?.get("template")
+  const mode = searchParams?.get("mode") as "template" | "scratch" | null
 
   // Check current user and permissions
   useEffect(() => {
@@ -109,6 +186,19 @@ export default function CreateProject() {
     checkCurrentUser()
   }, [])
 
+  // Set creation mode from URL parameter if provided
+  useEffect(() => {
+    if (mode && (mode === "template" || mode === "scratch")) {
+      setCreationMode(mode)
+      setStep("details")
+
+      // Initialize with appropriate template
+      if (mode === "scratch") {
+        setEvaluationTable([{ ...emptyTemplate }])
+      }
+    }
+  }, [mode])
+
   // Fetch project data if editing or load TestProject as default
   useEffect(() => {
     // Skip if already initialized or if there's an error
@@ -127,6 +217,7 @@ export default function CreateProject() {
             evaluators: project.evaluators || { PV1: "", PV2: "", VK: "" },
           })
           setEvaluationTable(project.evaluationTable || defaultEvaluationTable)
+          setStep("details")
         } else {
           console.error("Project not found")
           setError("Project not found")
@@ -205,8 +296,10 @@ export default function CreateProject() {
       if (id) {
         setProjectId(id)
         await fetchProjectData(id)
-      } else {
+      } else if (creationMode === "template" || mode === "template") {
         await fetchTestProject()
+      } else if (creationMode === "scratch" || mode === "scratch") {
+        setEvaluationTable([{ ...emptyTemplate }])
       }
       await fetchUsers()
       setInitialized(true)
@@ -218,7 +311,7 @@ export default function CreateProject() {
       // If user is loaded but not admin
       setLoading(false)
     }
-  }, [id, name, templateParam, initialized, error, currentUser])
+  }, [id, name, templateParam, initialized, error, currentUser, creationMode, mode])
 
   // Handle input changes for project data
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -395,6 +488,41 @@ export default function CreateProject() {
     }
   }
 
+  // Handle mode selection
+  const handleModeSelection = (mode: "template" | "scratch") => {
+    setCreationMode(mode)
+
+    if (mode === "template") {
+      // Load default template
+      setEvaluationTable(defaultEvaluationTable)
+    } else {
+      // Start with empty template
+      setEvaluationTable([{ ...emptyTemplate }])
+    }
+
+    setStep("details")
+  }
+
+  // Handle navigation between steps
+  const handleNextStep = () => {
+    if (step === "details") {
+      setStep("evaluators")
+    } else if (step === "evaluators") {
+      setStep("criteria")
+    }
+  }
+
+  const handlePreviousStep = () => {
+    if (step === "criteria") {
+      setStep("evaluators")
+    } else if (step === "evaluators") {
+      setStep("details")
+    } else if (step === "details" && !projectId) {
+      setStep("select")
+      setCreationMode(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -432,44 +560,166 @@ export default function CreateProject() {
     )
   }
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h2 className="text-xl font-bold text-gray-800 mb-6">{projectId ? "Edit Project" : "Create Project"}</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
-            <input
-              type="text"
-              name="projectName"
-              value={projectData.projectName}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter project name"
-            />
+  // Step 1: Select creation mode
+  if (step === "select") {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <div className="flex items-center mb-6">
+            <button
+              onClick={() => router.push("/admin-dashboard")}
+              className="flex items-center text-gray-600 hover:text-gray-900 mr-4"
+            >
+              <ArrowLeft className="h-5 w-5 mr-1" />
+              <span>Back</span>
+            </button>
+            <h2 className="text-xl font-bold text-gray-800">Create New Project</h2>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Project Description</label>
-            <textarea
-              name="projectDescription"
-              value={projectData.projectDescription}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter project description"
-              rows={3}
-            />
+          <p className="text-gray-600 mb-8">Choose how you want to create your new project:</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div
+              onClick={() => handleModeSelection("template")}
+              className="bg-white border-2 border-gray-200 hover:border-blue-500 rounded-lg p-6 cursor-pointer transition-all hover:shadow-md"
+            >
+              <div className="flex justify-center mb-4">
+                <div className="bg-blue-100 p-3 rounded-full">
+                  <FileText className="h-8 w-8 text-blue-600" />
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-center mb-2">Use Default Template</h3>
+              <p className="text-gray-600 text-center">
+                Start with our predefined evaluation criteria and customize as needed.
+              </p>
+              <div className="mt-4 text-center">
+                <span className="inline-flex items-center text-blue-600 font-medium">
+                  <Copy className="h-4 w-4 mr-1" />4 sections, 8 criteria included
+                </span>
+              </div>
+            </div>
+
+            <div
+              onClick={() => handleModeSelection("scratch")}
+              className="bg-white border-2 border-gray-200 hover:border-blue-500 rounded-lg p-6 cursor-pointer transition-all hover:shadow-md"
+            >
+              <div className="flex justify-center mb-4">
+                <div className="bg-green-100 p-3 rounded-full">
+                  <FilePlus className="h-8 w-8 text-green-600" />
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-center mb-2">Start from Scratch</h3>
+              <p className="text-gray-600 text-center">
+                Create a completely custom project with your own evaluation criteria.
+              </p>
+              <div className="mt-4 text-center">
+                <span className="inline-flex items-center text-green-600 font-medium">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Build your own structure
+                </span>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
+    )
+  }
 
-        <div className="mb-8">
+  return (
+    <div className="container mx-auto px-4 py-8">
+      {/* Progress indicator */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <div className="flex items-center mb-6">
+          <button
+            onClick={() => router.push("/admin-dashboard")}
+            className="flex items-center text-gray-600 hover:text-gray-900 mr-4"
+          >
+            <ArrowLeft className="h-5 w-5 mr-1" />
+            <span>Back</span>
+          </button>
+          <h2 className="text-xl font-bold text-gray-800">{projectId ? "Edit Project" : "Create Project"}</h2>
+        </div>
+
+        <div className="relative">
+          <div className="flex mb-4">
+            <div className={`flex-1 text-center ${step === "details" ? "font-semibold text-blue-600" : ""}`}>
+              Project Details
+            </div>
+            <div className={`flex-1 text-center ${step === "evaluators" ? "font-semibold text-blue-600" : ""}`}>
+              Assign Evaluators
+            </div>
+            <div className={`flex-1 text-center ${step === "criteria" ? "font-semibold text-blue-600" : ""}`}>
+              Evaluation Criteria
+            </div>
+          </div>
+          <div className="h-2 bg-gray-200 rounded-full">
+            <div
+              className="h-2 bg-blue-600 rounded-full transition-all duration-300"
+              style={{
+                width: step === "details" ? "33.3%" : step === "evaluators" ? "66.6%" : "100%",
+              }}
+            ></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Step content */}
+      {step === "details" && (
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <h3 className="text-lg font-medium text-gray-800 mb-6">Project Details</h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+              <input
+                type="text"
+                name="projectName"
+                value={projectData.projectName}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter project name"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Project Description</label>
+              <textarea
+                name="projectDescription"
+                value={projectData.projectDescription}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter project description"
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-between">
+            <button
+              onClick={handlePreviousStep}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+            >
+              Back
+            </button>
+            <button
+              onClick={handleNextStep}
+              disabled={!projectData.projectName}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300"
+            >
+              Next: Assign Evaluators
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === "evaluators" && (
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <div className="flex items-center mb-4">
             <Users className="h-5 w-5 text-blue-600 mr-2" />
             <h3 className="text-lg font-medium text-gray-800">Assign Evaluators</h3>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             {["PV1", "PV2", "VK"].map((role) => (
               <div key={role} className="flex flex-col">
                 <label className="block text-sm font-medium text-gray-700 mb-1">{role}</label>
@@ -488,161 +738,182 @@ export default function CreateProject() {
               </div>
             ))}
           </div>
-        </div>
-        <div className="mt-2 text-sm text-amber-600 bg-amber-50 p-3 rounded-md">
-          <p>
-            Note: Evaluators will be assigned to this project and will be able to see their assignments when they log
-            in.
-          </p>
-        </div>
-      </div>
 
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <ClipboardList className="h-5 w-5 text-blue-600 mr-2" />
-            <h3 className="text-lg font-medium text-gray-800">Evaluation Table</h3>
+          <div className="mt-2 text-sm text-amber-600 bg-amber-50 p-3 rounded-md mb-6">
+            <p>
+              Note: Evaluators will be assigned to this project and will be able to see their assignments when they log
+              in.
+            </p>
           </div>
-          <button
-            onClick={handleAddSection}
-            className="flex items-center gap-2 bg-blue-600 text-white px-3 py-1.5 rounded-md hover:bg-blue-700 transition-colors text-sm"
-          >
-            <PlusCircle className="h-4 w-4" />
-            <span>Add Section</span>
-          </button>
+
+          <div className="flex justify-between">
+            <button
+              onClick={handlePreviousStep}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+            >
+              Back to Project Details
+            </button>
+            <button onClick={handleNextStep} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+              Next: Evaluation Criteria
+            </button>
+          </div>
         </div>
+      )}
 
-        <div className="overflow-x-auto">
-          {evaluationTable.map((section, sectionIndex) => (
-            <div key={sectionIndex} className="mb-8 border border-gray-200 rounded-lg overflow-hidden">
-              <div className="bg-gray-50 p-4 flex flex-col md:flex-row md:items-center gap-4">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Section Title</label>
-                  <input
-                    type="text"
-                    value={section.section}
-                    onChange={(e) => handleSectionChange(sectionIndex, "section", e.target.value)}
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="Section title"
-                  />
+      {step === "criteria" && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <ClipboardList className="h-5 w-5 text-blue-600 mr-2" />
+              <h3 className="text-lg font-medium text-gray-800">Evaluation Criteria</h3>
+            </div>
+            <button
+              onClick={handleAddSection}
+              className="flex items-center gap-2 bg-blue-600 text-white px-3 py-1.5 rounded-md hover:bg-blue-700 transition-colors text-sm"
+            >
+              <PlusCircle className="h-4 w-4" />
+              <span>Add Section</span>
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            {evaluationTable.map((section, sectionIndex) => (
+              <div key={sectionIndex} className="mb-8 border border-gray-200 rounded-lg overflow-hidden">
+                <div className="bg-gray-50 p-4 flex flex-col md:flex-row md:items-center gap-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Section Title</label>
+                    <input
+                      type="text"
+                      value={section.section}
+                      onChange={(e) => handleSectionChange(sectionIndex, "section", e.target.value)}
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="Section title"
+                    />
+                  </div>
+
+                  <div className="w-full md:w-32">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Weight</label>
+                    <input
+                      type="number"
+                      value={section.weight}
+                      onChange={(e) => handleSectionChange(sectionIndex, "weight", Number.parseFloat(e.target.value))}
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div className="flex justify-end md:self-end">
+                    <button
+                      onClick={() => handleRemoveSection(sectionIndex)}
+                      className="flex items-center gap-1 text-red-600 hover:text-red-800 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span>Remove</span>
+                    </button>
+                  </div>
                 </div>
 
-                <div className="w-full md:w-32">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Weight</label>
-                  <input
-                    type="number"
-                    value={section.weight}
-                    onChange={(e) => handleSectionChange(sectionIndex, "weight", Number.parseFloat(e.target.value))}
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="flex justify-end md:self-end">
-                  <button
-                    onClick={() => handleRemoveSection(sectionIndex)}
-                    className="flex items-center gap-1 text-red-600 hover:text-red-800 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span>Remove</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-4">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 border-b">Criteria</th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 border-b w-24">
-                        Max Rating
-                      </th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 border-b w-20">Rating</th>
-                      <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 border-b w-24">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {section.criteria.map((criteria, criteriaIndex) => (
-                      <tr key={criteriaIndex} className="hover:bg-gray-50">
-                        <td className="px-4 py-2 border-b">
-                          <input
-                            type="text"
-                            value={criteria.description}
-                            onChange={(e) =>
-                              handleCriteriaChange(sectionIndex, criteriaIndex, "description", e.target.value)
-                            }
-                            className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            placeholder="Criterion description"
-                          />
-                        </td>
-                        <td className="px-4 py-2 border-b">
-                          <input
-                            type="number"
-                            value={criteria.maxRating}
-                            onChange={(e) =>
-                              handleCriteriaChange(
-                                sectionIndex,
-                                criteriaIndex,
-                                "maxRating",
-                                Number.parseInt(e.target.value),
-                              )
-                            }
-                            min="0"
-                            className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          />
-                        </td>
-                        <td className="px-4 py-2 border-b text-center">{criteria.rating}</td>
-                        <td className="px-4 py-2 border-b">
+                <div className="p-4">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 border-b">Criteria</th>
+                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 border-b w-24">
+                          Max Rating
+                        </th>
+                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 border-b w-20">Rating</th>
+                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-600 border-b w-24">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {section.criteria.map((criteria, criteriaIndex) => (
+                        <tr key={criteriaIndex} className="hover:bg-gray-50">
+                          <td className="px-4 py-2 border-b">
+                            <input
+                              type="text"
+                              value={criteria.description}
+                              onChange={(e) =>
+                                handleCriteriaChange(sectionIndex, criteriaIndex, "description", e.target.value)
+                              }
+                              className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              placeholder="Criterion description"
+                            />
+                          </td>
+                          <td className="px-4 py-2 border-b">
+                            <input
+                              type="number"
+                              value={criteria.maxRating}
+                              onChange={(e) =>
+                                handleCriteriaChange(
+                                  sectionIndex,
+                                  criteriaIndex,
+                                  "maxRating",
+                                  Number.parseInt(e.target.value),
+                                )
+                              }
+                              min="0"
+                              className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          </td>
+                          <td className="px-4 py-2 border-b text-center">{criteria.rating}</td>
+                          <td className="px-4 py-2 border-b">
+                            <button
+                              onClick={() => handleRemoveCriterion(sectionIndex, criteriaIndex)}
+                              className="flex items-center gap-1 text-red-600 hover:text-red-800 transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span>Remove</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      <tr>
+                        <td colSpan={4} className="px-4 py-3">
                           <button
-                            onClick={() => handleRemoveCriterion(sectionIndex, criteriaIndex)}
-                            className="flex items-center gap-1 text-red-600 hover:text-red-800 transition-colors"
+                            onClick={() => handleAddCriterion(sectionIndex)}
+                            className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors"
                           >
-                            <Trash2 className="h-4 w-4" />
-                            <span>Remove</span>
+                            <Plus className="h-4 w-4" />
+                            <span>Add Criterion</span>
                           </button>
                         </td>
                       </tr>
-                    ))}
-                    <tr>
-                      <td colSpan={4} className="px-4 py-3">
-                        <button
-                          onClick={() => handleAddCriterion(sectionIndex)}
-                          className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors"
-                        >
-                          <Plus className="h-4 w-4" />
-                          <span>Add Criterion</span>
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        <div className="flex justify-end mt-6">
-          <button
-            onClick={handleSaveProject}
-            disabled={saving}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors disabled:bg-green-400"
-          >
-            {saving ? (
-              <>
-                <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                <span>Saving...</span>
-              </>
-            ) : (
-              <>
-                <Save className="h-5 w-5" />
-                <span>{projectId ? "Update Project" : "Save Project"}</span>
-              </>
-            )}
-          </button>
+          <div className="flex justify-between mt-6">
+            <button
+              onClick={handlePreviousStep}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+            >
+              Back to Evaluators
+            </button>
+            <button
+              onClick={handleSaveProject}
+              disabled={saving}
+              className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors disabled:bg-green-400"
+            >
+              {saving ? (
+                <>
+                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="h-5 w-5" />
+                  <span>{projectId ? "Update Project" : "Save Project"}</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { ClipboardList, LogOut } from "lucide-react"
+import { ClipboardList, LogOut, Home } from "lucide-react"
 import { auth } from "@/lib/firebase-config"
 
 interface HeaderProps {
@@ -56,18 +56,28 @@ export default function Header({ user, onLogout }: HeaderProps) {
           <h1 className="text-xl font-bold text-gray-800">{getHeading()}</h1>
         </div>
 
-        {user && (
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">{user.email}</span>
-            <button
-              onClick={handleLogout}
-              className="flex items-center space-x-1 text-sm text-gray-700 hover:text-red-600 transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Logout</span>
-            </button>
-          </div>
-        )}
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => router.push("/landing")}
+            className="flex items-center space-x-1 text-sm text-gray-700 hover:text-blue-600 transition-colors"
+          >
+            <Home className="h-4 w-4" />
+            <span>Home</span>
+          </button>
+
+          {user && (
+            <>
+              <span className="text-sm text-gray-600">{user.email}</span>
+              <button
+                onClick={handleLogout}
+                className="flex items-center space-x-1 text-sm text-gray-700 hover:text-red-600 transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Logout</span>
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </header>
   )

@@ -27,12 +27,8 @@ export default function SignInPage() {
             role: userData.role,
           })
 
-          // Redirect based on role
-          if (userData.role === "admin") {
-            router.push("/admin-dashboard")
-          } else {
-            router.push("/landing")
-          }
+          // Always redirect to landing page regardless of role
+          router.push("/landing")
         } catch (error) {
           console.error("Error fetching user data:", error)
           setUser(null)

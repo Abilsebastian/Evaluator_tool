@@ -65,11 +65,8 @@ export default function SignIn({ setUser }: SignInProps) {
 
         setUser({ uid: user.uid, email: user.email, role: userData.role })
 
-        if (userData.role === "admin") {
-          router.push("/admin-dashboard")
-        } else {
-          router.push("/landing")
-        }
+        // Always redirect to landing page regardless of role
+        router.push("/landing")
       } catch (fetchError: any) {
         console.error("Fetch error:", fetchError)
 
