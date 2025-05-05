@@ -12,7 +12,8 @@ export const metadata: Metadata = {
   title: "LAPAS Evaluation Tool",
   description:
     "A web application to evaluate and display the results in a systematic way with less input from clients.",
-    generator: 'v0.dev'
+    generator: 'Next.js',
+  applicationName: 'LAPAS Evaluation Tool',
 }
 
 export default function RootLayout({
