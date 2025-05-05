@@ -6,8 +6,18 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { db, auth } from "@/lib/firebase-config"
 import { collection, getDocs, addDoc, doc, getDoc, deleteDoc } from "firebase/firestore"
-import { ClipboardCheck, PlusCircle, AlertCircle, CheckCircle, Clock, AlertTriangle, Trash2 } from "lucide-react"
+import {
+  ClipboardCheck,
+  PlusCircle,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  AlertTriangle,
+  Trash2,
+  HelpCircle,
+} from "lucide-react"
 import { useLanguage } from "@/lib/language-context"
+import Link from "next/link"
 
 interface Project {
   id: string
@@ -300,6 +310,18 @@ export default function LandingPage({ user }: LandingPageProps) {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {user && (
+        <div className="mt-4">
+          <Link
+            href="/help"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <HelpCircle className="h-4 w-4 mr-2" />
+            {t("viewUserManual")}
+          </Link>
         </div>
       )}
 

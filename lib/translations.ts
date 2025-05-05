@@ -53,6 +53,33 @@ export type TranslationKey =
   | "latvian"
   | "edit"
   | "viewResults"
+  | "userManual"
+  | "viewUserManual"
+  | "customizePdfSections"
+  | "selectAll"
+  | "deselectAll"
+  | "savePreferences"
+  | "preferencesSaved"
+  | "heroSection"
+  | "overviewSection"
+  | "keyFeaturesSection"
+  | "userRolesSection"
+  | "workflowSection"
+  | "benefitsSection"
+  | "technicalSpecsSection"
+  | "callToActionSection"
+  | "theme"
+  | "lightTheme"
+  | "darkTheme"
+  | "blueTheme"
+  | "greenTheme"
+  | "purpleTheme"
+  | "themeSettings"
+  | "chooseTheme"
+  | "applyTheme"
+  | "themeApplied"
+  | "projectAssignments"
+  | "help"
 
 export const translations: Record<Language, Record<TranslationKey, string>> = {
   en: {
@@ -112,6 +139,33 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     latvian: "Latvian",
     edit: "Edit",
     viewResults: "View Results",
+    userManual: "User Manual",
+    viewUserManual: "View User Manual",
+    customizePdfSections: "Customize PDF Sections",
+    selectAll: "Select All",
+    deselectAll: "Deselect All",
+    savePreferences: "Save Preferences",
+    preferencesSaved: "Preferences saved!",
+    heroSection: "Hero Section",
+    overviewSection: "Overview",
+    keyFeaturesSection: "Key Features",
+    userRolesSection: "User Roles",
+    workflowSection: "Workflow",
+    benefitsSection: "Benefits",
+    technicalSpecsSection: "Technical Specifications",
+    callToActionSection: "Call to Action",
+    theme: "Theme",
+    lightTheme: "Light",
+    darkTheme: "Dark",
+    blueTheme: "Blue",
+    greenTheme: "Green",
+    purpleTheme: "Purple",
+    themeSettings: "Theme Settings",
+    chooseTheme: "Choose a theme",
+    applyTheme: "Apply Theme",
+    themeApplied: "Theme applied successfully",
+    projectAssignments: "Project Assignments",
+    help: "Help",
   },
   lv: {
     welcome: "Laipni lūgti!",
@@ -170,6 +224,33 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     latvian: "Latviešu",
     edit: "Rediģēt",
     viewResults: "Skatīt Rezultātus",
+    userManual: "Lietotāja Rokasgrāmata",
+    viewUserManual: "Skatīt Lietotāja Rokasgrāmatu",
+    customizePdfSections: "Pielāgot PDF Sadaļas",
+    selectAll: "Atlasīt Visus",
+    deselectAll: "Noņemt Visus",
+    savePreferences: "Saglabāt Preferences",
+    preferencesSaved: "Preferences saglabātas!",
+    heroSection: "Galvenā Sadaļa",
+    overviewSection: "Pārskats",
+    keyFeaturesSection: "Galvenās Funkcijas",
+    userRolesSection: "Lietotāju Lomas",
+    workflowSection: "Darba Plūsma",
+    benefitsSection: "Priekšrocības",
+    technicalSpecsSection: "Tehniskās Specifikācijas",
+    callToActionSection: "Aicinājums Rīkoties",
+    theme: "Tēma",
+    lightTheme: "Gaišs",
+    darkTheme: "Tumšs",
+    blueTheme: "Zils",
+    greenTheme: "Zaļš",
+    purpleTheme: "Violets",
+    themeSettings: "Tēmas iestatījumi",
+    chooseTheme: "Izvēlieties tēmu",
+    applyTheme: "Pielietot tēmu",
+    themeApplied: "Tēma veiksmīgi pielietota",
+    projectAssignments: "Projektu Piešķiršana",
+    help: "Palīdzība",
   },
 }
 

@@ -1,44 +1,29 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { onAuthStateChanged } from "firebase/auth"
 import { auth, db } from "@/lib/firebase-config"
 import { doc, getDoc } from "firebase/firestore"
 import Header from "@/components/header"
-import AdminDashboard from "@/components/admin-dashboard"
-import { onAuthStateChanged } from "firebase/auth"
+import ProductShowcase from "@/components/product-showcase"
+import { LanguageProvider } from "@/lib/language-context"
 
-export default function AdminDashboardPage() {
+export default function ProductShowcasePage() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
-    // Check if auth is initialized before using onAuthStateChanged
-    if (!auth) {
-      console.error("Firebase auth is not initialized")
-      setLoading(false)
-      router.push("/")
-      return
-    }
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          // Check if db is initialized
-          if (!db) {
-            console.error("Firebase db is not initialized")
-            setLoading(false)
-            router.push("/")
-            return
-          }
-
           // Fetch user role from Firestore
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
           const userData = userDoc.exists() ? userDoc.data() : {}
 
           if (userData.role !== "admin") {
-            // Redirect non-admin users
+            // Only admins can access this page
             router.push("/landing")
             return
           }
@@ -65,11 +50,9 @@ export default function AdminDashboardPage() {
 
   const handleLogout = async () => {
     try {
-      if (auth) {
-        await auth.signOut()
-        setUser(null)
-        router.push("/")
-      }
+      await auth.signOut()
+      setUser(null)
+      router.push("/")
     } catch (error) {
       console.error("Error signing out:", error)
     }
@@ -84,11 +67,11 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <>
+    <LanguageProvider>
       <Header user={user} onLogout={handleLogout} />
       <main className="flex-1">
         {user?.role === "admin" ? (
-          <AdminDashboard user={user} />
+          <ProductShowcase />
         ) : (
           <div className="container mx-auto px-4 py-8">
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
@@ -97,6 +80,6 @@ export default function AdminDashboardPage() {
           </div>
         )}
       </main>
-    </>
+    </LanguageProvider>
   )
 }

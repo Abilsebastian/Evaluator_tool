@@ -300,6 +300,14 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
               <span>Fix Assignments</span>
             </button>
 
+            <button
+              onClick={() => router.push("/product-showcase")}
+              className="flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+            >
+              <FileText className="h-5 w-5" />
+              <span>Product Showcase PDF</span>
+            </button>
+
             <div className="relative group">
               <button className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
                 <PlusCircle className="h-5 w-5" />
