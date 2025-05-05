@@ -55,31 +55,37 @@ export type TranslationKey =
   | "viewResults"
   | "userManual"
   | "viewUserManual"
-  | "customizePdfSections"
-  | "selectAll"
-  | "deselectAll"
-  | "savePreferences"
-  | "preferencesSaved"
-  | "heroSection"
-  | "overviewSection"
-  | "keyFeaturesSection"
-  | "userRolesSection"
-  | "workflowSection"
-  | "benefitsSection"
-  | "technicalSpecsSection"
-  | "callToActionSection"
-  | "theme"
-  | "lightTheme"
-  | "darkTheme"
-  | "blueTheme"
-  | "greenTheme"
-  | "purpleTheme"
-  | "themeSettings"
-  | "chooseTheme"
-  | "applyTheme"
-  | "themeApplied"
-  | "projectAssignments"
-  | "help"
+  | "projectReport"
+  | "executiveSummary"
+  | "overallScore"
+  | "completionStatus"
+  | "topSections"
+  | "sectionScores"
+  | "evaluatorStatus"
+  | "detailedCriteria"
+  | "section"
+  | "weight"
+  | "score"
+  | "visualization"
+  | "role"
+  | "status"
+  | "lastUpdated"
+  | "submitted"
+  | "criteria"
+  | "maxRating"
+  | "rating"
+  | "reportGenerated"
+  | "generated"
+  | "evaluators"
+  | "created"
+  | "export"
+  | "print"
+  | "email"
+  | "emailFeatureNotImplemented"
+  | "projectNotFound"
+  | "errorLoadingProject"
+  | "back"
+  | "report"
 
 export const translations: Record<Language, Record<TranslationKey, string>> = {
   en: {
@@ -141,31 +147,37 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     viewResults: "View Results",
     userManual: "User Manual",
     viewUserManual: "View User Manual",
-    customizePdfSections: "Customize PDF Sections",
-    selectAll: "Select All",
-    deselectAll: "Deselect All",
-    savePreferences: "Save Preferences",
-    preferencesSaved: "Preferences saved!",
-    heroSection: "Hero Section",
-    overviewSection: "Overview",
-    keyFeaturesSection: "Key Features",
-    userRolesSection: "User Roles",
-    workflowSection: "Workflow",
-    benefitsSection: "Benefits",
-    technicalSpecsSection: "Technical Specifications",
-    callToActionSection: "Call to Action",
-    theme: "Theme",
-    lightTheme: "Light",
-    darkTheme: "Dark",
-    blueTheme: "Blue",
-    greenTheme: "Green",
-    purpleTheme: "Purple",
-    themeSettings: "Theme Settings",
-    chooseTheme: "Choose a theme",
-    applyTheme: "Apply Theme",
-    themeApplied: "Theme applied successfully",
-    projectAssignments: "Project Assignments",
-    help: "Help",
+    projectReport: "Project Report",
+    executiveSummary: "Executive Summary",
+    overallScore: "Overall Score",
+    completionStatus: "Completion Status",
+    topSections: "Top Sections",
+    sectionScores: "Section Scores",
+    evaluatorStatus: "Evaluator Status",
+    detailedCriteria: "Detailed Criteria",
+    section: "Section",
+    weight: "Weight",
+    score: "Score",
+    visualization: "Visualization",
+    role: "Role",
+    status: "Status",
+    lastUpdated: "Last Updated",
+    submitted: "Submitted",
+    criteria: "Criteria",
+    maxRating: "Max Rating",
+    rating: "Rating",
+    reportGenerated: "Report Generated",
+    generated: "Generated",
+    evaluators: "Evaluators",
+    created: "Created",
+    export: "Export",
+    print: "Print",
+    email: "Email",
+    emailFeatureNotImplemented: "Email feature not yet implemented",
+    projectNotFound: "Project not found",
+    errorLoadingProject: "Error loading project",
+    back: "Back",
+    report: "Report",
   },
   lv: {
     welcome: "Laipni lūgti!",
@@ -226,31 +238,37 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
     viewResults: "Skatīt Rezultātus",
     userManual: "Lietotāja Rokasgrāmata",
     viewUserManual: "Skatīt Lietotāja Rokasgrāmatu",
-    customizePdfSections: "Pielāgot PDF Sadaļas",
-    selectAll: "Atlasīt Visus",
-    deselectAll: "Noņemt Visus",
-    savePreferences: "Saglabāt Preferences",
-    preferencesSaved: "Preferences saglabātas!",
-    heroSection: "Galvenā Sadaļa",
-    overviewSection: "Pārskats",
-    keyFeaturesSection: "Galvenās Funkcijas",
-    userRolesSection: "Lietotāju Lomas",
-    workflowSection: "Darba Plūsma",
-    benefitsSection: "Priekšrocības",
-    technicalSpecsSection: "Tehniskās Specifikācijas",
-    callToActionSection: "Aicinājums Rīkoties",
-    theme: "Tēma",
-    lightTheme: "Gaišs",
-    darkTheme: "Tumšs",
-    blueTheme: "Zils",
-    greenTheme: "Zaļš",
-    purpleTheme: "Violets",
-    themeSettings: "Tēmas iestatījumi",
-    chooseTheme: "Izvēlieties tēmu",
-    applyTheme: "Pielietot tēmu",
-    themeApplied: "Tēma veiksmīgi pielietota",
-    projectAssignments: "Projektu Piešķiršana",
-    help: "Palīdzība",
+    projectReport: "Projekta Atskaite",
+    executiveSummary: "Kopsavilkums",
+    overallScore: "Kopējais Rezultāts",
+    completionStatus: "Pabeigšanas Statuss",
+    topSections: "Labākās Sadaļas",
+    sectionScores: "Sadaļu Rezultāti",
+    evaluatorStatus: "Vērtētāju Statuss",
+    detailedCriteria: "Detalizēti Kritēriji",
+    section: "Sadaļa",
+    weight: "Svars",
+    score: "Rezultāts",
+    visualization: "Vizualizācija",
+    role: "Loma",
+    status: "Statuss",
+    lastUpdated: "Pēdējoreiz Atjaunināts",
+    submitted: "Iesniegts",
+    criteria: "Kritēriji",
+    maxRating: "Maksimālais Vērtējums",
+    rating: "Vērtējums",
+    reportGenerated: "Atskaite Ģenerēta",
+    generated: "Ģenerēts",
+    evaluators: "Vērtētāji",
+    created: "Izveidots",
+    export: "Eksportēt",
+    print: "Drukāt",
+    email: "E-pasts",
+    emailFeatureNotImplemented: "E-pasta funkcija vēl nav ieviesta",
+    projectNotFound: "Projekts nav atrasts",
+    errorLoadingProject: "Kļūda ielādējot projektu",
+    back: "Atpakaļ",
+    report: "Atskaite",
   },
 }
 

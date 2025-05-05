@@ -59,10 +59,9 @@
     "vaul": "^0.9.6",
     "zod": "^3.24.1",
     "firebase": "latest",
-    "chart.js": "latest",
     "jspdf": "latest",
     "html2canvas": "latest",
-    "tailwindcss": "latest"
+    "chart.js": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

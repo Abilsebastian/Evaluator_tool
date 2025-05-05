@@ -4,7 +4,6 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import ClientAppWrapper from "@/components/client-app-wrapper"
 import { LanguageProvider } from "@/lib/language-context"
-import { ThemeProvider } from "@/lib/theme-context"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -20,9 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className={inter.className}>
         <LanguageProvider>
-          <ThemeProvider>
-            <ClientAppWrapper>{children}</ClientAppWrapper>
-          </ThemeProvider>
+          <ClientAppWrapper>{children}</ClientAppWrapper>
         </LanguageProvider>
       </body>
     </html>

@@ -1,4 +1,4 @@
-"\"use client"
+"use client"
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 import { auth, db } from "@/lib/firebase-config"
@@ -40,5 +40,3 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
 
   return <FirebaseContext.Provider value={{ auth, db, initialized, error }}>{children}</FirebaseContext.Provider>
 }
-
-export default FirebaseProvider

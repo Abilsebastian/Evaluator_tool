@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { onAuthStateChanged } from "firebase/auth"
 import { auth, db } from "@/lib/firebase-config"
 import { doc, getDoc } from "firebase/firestore"
 import Header from "@/components/header"
 import AdminDashboard from "@/components/admin-dashboard"
-import { onAuthStateChanged } from "firebase/auth"
 
 export default function AdminDashboardPage() {
   const [user, setUser] = useState<any>(null)
@@ -14,25 +14,9 @@ export default function AdminDashboardPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Check if auth is initialized before using onAuthStateChanged
-    if (!auth) {
-      console.error("Firebase auth is not initialized")
-      setLoading(false)
-      router.push("/")
-      return
-    }
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          // Check if db is initialized
-          if (!db) {
-            console.error("Firebase db is not initialized")
-            setLoading(false)
-            router.push("/")
-            return
-          }
-
           // Fetch user role from Firestore
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
           const userData = userDoc.exists() ? userDoc.data() : {}
@@ -65,11 +49,9 @@ export default function AdminDashboardPage() {
 
   const handleLogout = async () => {
     try {
-      if (auth) {
-        await auth.signOut()
-        setUser(null)
-        router.push("/")
-      }
+      await auth.signOut()
+      setUser(null)
+      router.push("/")
     } catch (error) {
       console.error("Error signing out:", error)
     }
