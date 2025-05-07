@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation"
 import { onAuthStateChanged } from "firebase/auth"
 import { auth, db } from "@/lib/firebase-config"
 import { doc, getDoc } from "firebase/firestore"
-import SignIn from "@/components/sign-in"
+import Header from "@/components/header"
+import ProductShowcase from "@/components/product-showcase"
+import { LanguageProvider } from "@/lib/language-context"
 
-export default function SignInPage() {
+export default function ProductShowcasePage() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
@@ -20,29 +22,40 @@ export default function SignInPage() {
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
           const userData = userDoc.exists() ? userDoc.data() : {}
 
+          if (userData.role !== "admin") {
+            // Only admins can access this page
+            router.push("/landing")
+            return
+          }
+
           setUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             role: userData.role,
           })
-
-          // Always redirect to landing page regardless of role
-          router.push("/landing")
         } catch (error) {
           console.error("Error fetching user data:", error)
           setUser(null)
+          router.push("/")
         }
       } else {
         setUser(null)
-        setLoading(false)
+        router.push("/")
       }
+      setLoading(false)
     })
 
     return () => unsubscribe()
   }, [router])
 
-  const handleSetUser = (userData: any) => {
-    setUser(userData)
+  const handleLogout = async () => {
+    try {
+      await auth.signOut()
+      setUser(null)
+      router.push("/")
+    } catch (error) {
+      console.error("Error signing out:", error)
+    }
   }
 
   if (loading) {
@@ -54,10 +67,19 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <main className="flex-1 flex items-center justify-center pt-16">
-        {!user && <SignIn setUser={handleSetUser} />}
+    <LanguageProvider>
+      <Header user={user} onLogout={handleLogout} />
+      <main className="flex-1">
+        {user?.role === "admin" ? (
+          <ProductShowcase />
+        ) : (
+          <div className="container mx-auto px-4 py-8">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+              You don't have permission to access this page.
+            </div>
+          </div>
+        )}
       </main>
-    </div>
+    </LanguageProvider>
   )
 }

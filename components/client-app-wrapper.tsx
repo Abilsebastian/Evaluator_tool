@@ -1,83 +1,62 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
-import { FirebaseProvider } from "./firebase-provider"
-import { onAuthStateChanged } from "firebase/auth"
-import { doc, getDoc } from "firebase/firestore"
-import { auth, db } from "@/lib/firebase-config"
-import { useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
+import Header from "./header"
+import Sidebar from "./sidebar"
+import Footer from "./footer"
+import { LanguageProvider } from "@/lib/language-context"
 
 export default function ClientAppWrapper({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const pathname = usePathname()
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    // Check if we're in the browser
-    if (typeof window === "undefined") return
+    setMounted(true)
+  }, [])
 
-    // Check if Firebase is initialized
-    if (!auth || !db) {
-      setError("Firebase is not initialized")
-      setLoading(false)
-      return
+  // Check if we're on an auth page
+  const authPages = ["/signin", "/register", "/reset-password"]
+  const isAuthPage = authPages.includes(pathname)
+
+  // Close sidebar when clicking on main content
+  const handleMainContentClick = () => {
+    if (sidebarOpen) {
+      setSidebarOpen(false)
     }
-
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      async (firebaseUser) => {
-        if (firebaseUser) {
-          try {
-            // Fetch user role from Firestore
-            const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
-            const userData = userDoc.exists() ? userDoc.data() : {}
-
-            setUser({
-              uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              role: userData.role,
-            })
-          } catch (error) {
-            console.error("Error fetching user data:", error)
-            setUser(null)
-          }
-        } else {
-          setUser(null)
-        }
-        setLoading(false)
-      },
-      (error) => {
-        console.error("Auth state change error:", error)
-        setError(`Authentication error: ${error.message}`)
-        setLoading(false)
-      },
-    )
-
-    return () => unsubscribe()
-  }, [router])
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    )
   }
 
-  if (error) {
-    return (
-      <div className="flex flex-col justify-center items-center min-h-screen p-4 gap-4">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md max-w-md w-full">
-          <h2 className="text-lg font-semibold mb-2">Error</h2>
-          <p>{error}</p>
-          <p className="mt-4 text-sm">Please check your environment variables and make sure they are correctly set.</p>
+  // Toggle sidebar
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen)
+  }
+
+  return (
+    <LanguageProvider>
+      <div className="flex h-screen overflow-hidden">
+        {/* Sidebar - don't render on auth pages */}
+        {!isAuthPage && mounted && <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />}
+
+        {/* Main content */}
+        <div className="flex flex-col flex-1 w-full overflow-hidden" onClick={handleMainContentClick}>
+          {/* Header */}
+          <Header isAuthPage={isAuthPage} toggleSidebar={toggleSidebar} />
+
+          {/* Main content area */}
+          <main
+            className={`flex-1 overflow-y-auto pt-16 pb-16 transition-all duration-300 ${
+              isAuthPage ? "px-4" : sidebarOpen ? "md:pl-64" : "md:pl-20"
+            }`}
+          >
+            <div className={`container mx-auto py-6 ${isAuthPage ? "max-w-md" : ""}`}>{children}</div>
+          </main>
+
+          {/* Footer */}
+          <Footer />
         </div>
       </div>
-    )
-  }
-
-  return <FirebaseProvider>{children}</FirebaseProvider>
+    </LanguageProvider>
+  )
 }

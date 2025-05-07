@@ -1,11 +1,23 @@
 import type React from "react"
 import "./globals.css"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Inter, Poppins } from "next/font/google"
 import ClientAppWrapper from "@/components/client-app-wrapper"
-import { LanguageProvider } from "@/lib/language-context"
 
-const inter = Inter({ subsets: ["latin"] })
+// Load Inter font
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+})
+
+// Load Poppins font
+const poppins = Poppins({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-poppins",
+})
 
 export const metadata: Metadata = {
   title: "LAPAS Evaluator Tool",
@@ -16,11 +28,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${poppins.variable}`}>
       <body className={inter.className}>
-        <LanguageProvider>
-          <ClientAppWrapper>{children}</ClientAppWrapper>
-        </LanguageProvider>
+        <ClientAppWrapper>{children}</ClientAppWrapper>
       </body>
     </html>
   )

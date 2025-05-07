@@ -300,6 +300,14 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
               <span>Fix Assignments</span>
             </button>
 
+            <button
+              onClick={() => router.push("/product-showcase")}
+              className="flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+            >
+              <FileText className="h-5 w-5" />
+              <span>Product Showcase PDF</span>
+            </button>
+
             <div className="relative group">
               <button className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
                 <PlusCircle className="h-5 w-5" />
@@ -543,13 +551,6 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                         <BarChart className="h-3.5 w-3.5" />
                         <span className="text-xs">View Results</span>
                       </button>
-                      <button
-                        onClick={() => router.push(`/project-report/${project.id}`)}
-                        className="flex items-center gap-1 px-2 py-1 bg-indigo-50 text-indigo-600 rounded-md hover:bg-indigo-100"
-                      >
-                        <FileText className="h-3.5 w-3.5" />
-                        <span className="text-xs">Report</span>
-                      </button>
 
                       <button
                         onClick={() => handleDeleteProject(project.id)}
@@ -649,13 +650,6 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                           >
                             <BarChart className="h-4 w-4" />
                             <span>View Results</span>
-                          </button>
-                          <button
-                            onClick={() => router.push(`/project-report/${project.id}`)}
-                            className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 transition-colors"
-                          >
-                            <FileText className="h-4 w-4" />
-                            <span>Report</span>
                           </button>
                           <button
                             onClick={() => handleDeleteProject(project.id)}

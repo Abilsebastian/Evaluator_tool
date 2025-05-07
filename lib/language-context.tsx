@@ -1,4 +1,4 @@
-"use client"
+"\"use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { type Language, type TranslationKey, getTranslation } from "./translations"
@@ -41,4 +41,9 @@ export function useLanguage() {
     throw new Error("useLanguage must be used within a LanguageProvider")
   }
   return context
+}
+
+export function useTranslation() {
+  const { t } = useLanguage()
+  return { t }
 }

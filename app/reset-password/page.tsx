@@ -4,9 +4,9 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { onAuthStateChanged } from "firebase/auth"
 import { auth } from "@/lib/firebase-config"
-import Register from "@/components/register"
+import PasswordReset from "@/components/password-reset"
 
-export default function RegisterPage() {
+export default function ResetPasswordPage() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
@@ -36,7 +36,7 @@ export default function RegisterPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <main className="flex-1 flex items-center justify-center pt-16">
-        <Register />
+        <PasswordReset />
       </main>
     </div>
   )

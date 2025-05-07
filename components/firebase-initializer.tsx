@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useEffect, useState } from "react"
 import { getFirebaseAuth, getFirebaseDb } from "@/lib/firebase-config"
 
@@ -23,7 +22,8 @@ export default function FirebaseInitializer({ children }: FirebaseInitializerPro
         console.log("Firebase successfully initialized")
         setInitialized(true)
       } else {
-        setError("Failed to initialize Firebase")
+        console.error("Firebase initialization failed - auth or db is undefined")
+        setError("Failed to initialize Firebase. Please check your environment variables and refresh the page.")
       }
     } catch (err: any) {
       console.error("Firebase initialization error:", err)
@@ -38,6 +38,12 @@ export default function FirebaseInitializer({ children }: FirebaseInitializerPro
           <h2 className="text-lg font-semibold mb-2">Firebase Initialization Error</h2>
           <p>{error}</p>
           <p className="mt-4 text-sm">Please check your environment variables and Firebase configuration.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Refresh Page
+          </button>
         </div>
       </div>
     )

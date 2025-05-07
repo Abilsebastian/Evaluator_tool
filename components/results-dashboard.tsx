@@ -16,7 +16,6 @@ import {
   CheckCircle,
   Clock,
   AlertTriangle,
-  FileText,
 } from "lucide-react"
 import Chart from "chart.js/auto"
 
@@ -565,14 +564,6 @@ export default function ResultsDashboard({ user }: ResultsDashboardProps) {
           >
             <Download className="h-4 w-4 mr-2" />
             <span>Export Results</span>
-          </button>
-          <button
-            onClick={() => router.push(`/project-report/${selectedProject?.id}`)}
-            disabled={!selectedProject}
-            className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-indigo-300"
-          >
-            <FileText className="h-4 w-4 mr-2" />
-            <span>report</span>
           </button>
         </div>
       </div>
