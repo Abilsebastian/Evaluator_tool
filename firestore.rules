@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Helper function to check if user is an evaluator for this project
+    function isEvaluator(projectData) {
+      return request.auth != null && 
+             (projectData.evaluators.PV1.uid == request.auth.uid || 
+              projectData.evaluators.PV2.uid == request.auth.uid || 
+              projectData.evaluators.VK.uid == request.auth.uid);
+    }
+    
+    // Users collection rules
+    match /users/{userId} {
+      // Users can read and write their own data
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Admins can read all user documents (for assigning evaluators)
+      allow read: if isAdmin();
+      
+      // Allow admins to update assignedProjects field
+      allow update: if isAdmin();
+    }
+    
+    // Projects collection rules
+    match /projects/{projectId} {
+      // Admins have full access to all projects
+      allow create, read, update, delete: if isAdmin();
+      
+      // Evaluators can read projects they're assigned to
+      allow read: if request.auth != null && isEvaluator(resource.data);
+      
+      // Evaluators can update only their evaluation data
+      allow update: if request.auth != null && 
+                     isEvaluator(resource.data) &&
+                     request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['evaluationTable', 'evaluations']);
+                       
+      // Important: Do NOT allow listing all projects for non-admins
+      // Instead, use the user's assignedProjects array to fetch projects individually
+    }
+  }
+}

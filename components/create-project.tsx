@@ -36,64 +36,141 @@ const emptyTemplate = {
 // Default evaluation template with predefined sections
 const defaultEvaluationTable = [
   {
-    section: "Project purpose and relevance",
+    section: "Projekta mērķis un atbilstība ",
     weight: 0.2,
     criteria: [
       {
-        description: "Contribute to the achievement of the objective of the competition",
+        description: "Dod ieguldījumu konkursa mērķa sasniegšanā: “Iedvesmot un iesaistīt Eiropas Savienības pilsoņus, jo īpaši jauniešus un tos, kas ir mazāk informēti par globāliem izaicinājumiem un mazāk saistīti ar tām, uzņemties kopīgu atbildību, lai izveidotu iekļaujošāku, līdztiesīgāku un ilgtspējīgāku pasauli.”",
         maxRating: 5,
-        rating: 5,
+        rating: 0,
       },
       {
-        description: "The target group is meaningfully involved in the project",
+        description: "Projektā tiek jēgpilni iesaistīta mērķa grupa",
         maxRating: 5,
-        rating: 5,
+        rating: 0,
+      },
+      {
+        description: "Projekts palielina mērķgrupas kritisko izpratni par globāliem izaicinājumiem",
+        maxRating: 5,
+        rating: 0,
       },
     ],
   },
   {
-    section: "Project implementation",
+    section: "Latvijas un Eiropas Savienības pilsoņu mērķa grupu zināšanas un iesaiste",
     weight: 0.3,
     criteria: [
       {
-        description: "Clear and realistic implementation plan",
+        description: "Iesniedzējs pierāda specifiskas zināšanas par mērķa grupu un spēju to sasniegt",
         maxRating: 5,
         rating: 0,
       },
       {
-        description: "Appropriate resource allocation",
+        description: "Iesniedzējs ir iekļāvis mērķa grupu(-as) pieteikuma izstrādē",
+        maxRating: 5,
+        rating: 0,
+      },
+      {
+        description: "Projekta komunikācijas kanālu un metožu izvēle ir piemērota, lai jēgpilni iesaistītu mērķa grupu un radītu tai kritisku izpratni par globāliem izaicinājumiem",
+        maxRating: 5,
+        rating: 0,
+      },
+      {
+        description: "Projekts sasniedz mērķa grupu, kas definēta kā “mazāk jutīga” pret globālajiem izaicinājumiem, un/vai projekts sasniedz mērķa grupu, kas definēta kā “jaunieši”",
+        maxRating: 5,
+        rating: 0,
+      },
+      {
+        description: "Projekta aktivitātes spēs motivēt mērķa grupu(-as) jēgpilni iesaistīties (virzīties augšup iesaistes piramīdā) un/vai kritiski apzināties problēmas, uz kurām norāda projekta pieteikums",
         maxRating: 5,
         rating: 0,
       },
     ],
   },
   {
-    section: "Project impact",
+    section: "Globālo Dienvidu iesaiste",
     weight: 0.3,
     criteria: [
       {
-        description: "Expected outcomes are clearly defined",
+        description: "Projekta pieteikumā ir iesaistīti cilvēki, kurus tieši skārusi globālo izaicinājumu ietekme, tiem darbojoties kā partneriem, stāstītājiem, dalībniekiem vai ieņemot citu lomu projekta izstrādē un īstenošanā un nodrošinot kvalificētu un ētisku iesaisti",
         maxRating: 5,
         rating: 0,
       },
       {
-        description: "Sustainability of project results",
+        description: "Projekta pieteikumā ir iesaistītas ieinteresētās personas piedāvātajām darbībām",
         maxRating: 5,
         rating: 0,
       },
     ],
   },
   {
-    section: "Budget",
+    section: "Pārmaiņu teorijas piemērošana",
     weight: 0.2,
     criteria: [
       {
-        description: "Cost-effectiveness of the proposed budget",
+        description: "Izvēlētās aktivitātes ir atbilstošas un pietiekamas, lai radītu rīcības izmaiņas, ko ar piedāvāto projektu cenšas panākt",
         maxRating: 5,
         rating: 0,
       },
       {
-        description: "Clarity and detail of the budget",
+        description: "Izvēlētās aktivitātes ir atbilstošas un pietiekamas, lai sasniegtu izvēlēto mērķa grupu(-as)",
+        maxRating: 5,
+        rating: 0,
+      },
+      {
+        description: "Izvēlēto aktivitāšu sākuma punkts ir līdzdalības piramīdā un cik lielā mērā tās parāda, kā šīs aktivitātes virza mērķa grupu(-as) no viena piramīdas līmeņa uz nākamo",
+        maxRating: 5,
+        rating: 0,
+      },
+      {
+        description: "Piedāvātā projekta rezultāti ir izmērāmi",
+        maxRating: 5,
+        rating: 0,
+      },
+      {
+        description: "Piedāvātā projekta rezultāti, visticamāk, tiks izmantoti pat pēc projekta beigām",
+        maxRating: 5,
+        rating: 0,
+      },
+      {
+        description: "Projekts veicina dzimumu līdztiesību, izmantojot transformatīvo un",
+        maxRating: 5,
+        rating: 0,
+      },
+    ],
+  },
+  {
+    section: "Kapacitāte",
+    weight: 0.2,
+    criteria: [
+      {
+        description: "Projekta iesniedzējam un partnerim ir atbilstoša kapacitāte (administratīvā, finanšu, saturiskā), lai īstenotu aktivitātes saistībā ar plānoto mērķi, metodēm un mērķa grupāms",
+        maxRating: 5,
+        rating: 0,
+      },
+      {
+        description: "Projekta iesniedzējam ir nepieciešamās zināšanas un pieredze īstenot aktivitātes, tostarp komunikācijas prasmes un piekļuve attiecīgajiem mērķa grupas komunikācijas kanāliem",
+        maxRating: 5,
+        rating: 0,
+      },
+      {
+        description: "Piedāvātās aktivitātes ir saistītas ar iesniedzējorganizācijas(-u) mērķiem, darbību, misiju un/vai vīzijum",
+        maxRating: 5,
+        rating: 0,
+      },
+    ],
+  },
+  {
+    section: "Izmaksu efektivitāte",
+    weight: 0.2,
+    criteria: [
+      {
+        description: "Projekta izmaksu līmenis ir pamatoti saistīts ar aktivitātēm, sagaidāmajiem rezultātiem un kopējo budžetu",
+        maxRating: 5,
+        rating: 0,
+      },
+      {
+        description: "Aktivtāšu izmaksu līmenis ir pamatoti saistīts ar sasniegto un iesaistīto ES pilsoņu skaitu",
         maxRating: 5,
         rating: 0,
       },
