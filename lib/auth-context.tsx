@@ -1,66 +1,53 @@
 "use client"
 
-import type React from "react"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { auth, db } from "@/lib/firebase-config"
 import {
-  getAuth,
-  onAuthStateChanged,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
-  type User as FirebaseUser,
+  onAuthStateChanged,
 } from "firebase/auth"
 import { doc, getDoc } from "firebase/firestore"
-import { getFirebaseDb } from "@/lib/firebase-config"
 
-interface UserData {
+type User = {
   uid: string
   email: string | null
-  role: string
-  displayName?: string | null
-  photoURL?: string | null
-}
+  role?: string
+} | null
 
-interface AuthContextType {
-  user: UserData | null
+type AuthContextType = {
+  user: User
   loading: boolean
-  error: string | null
   signIn: (email: string, password: string) => Promise<void>
+  signUp: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: true,
-  error: null,
-  signIn: async () => {},
-  signOut: async () => {},
-})
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export const useAuth = () => useContext(AuthContext)
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserData | null>(null)
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const auth = getAuth()
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          // Get additional user data from Firestore
-          const userData = await getUserData(firebaseUser)
-          setUser(userData)
-        } catch (err) {
-          console.error("Error fetching user data:", err)
-          // Still set basic user info even if additional data fetch fails
+          // Get user role from Firestore
+          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
+          const userData = userDoc.exists() ? userDoc.data() : {}
+
           setUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email,
-            role: "user", // Default role
-            displayName: firebaseUser.displayName,
-            photoURL: firebaseUser.photoURL,
+            role: userData.role || "user",
+          })
+        } catch (error) {
+          console.error("Error fetching user data:", error)
+          setUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
           })
         }
       } else {
@@ -72,72 +59,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe()
   }, [])
 
-  const getUserData = async (firebaseUser: FirebaseUser): Promise<UserData> => {
-    const db = getFirebaseDb()
-    if (!db) throw new Error("Database not initialized")
-
-    // Try to get user data from Firestore
-    const userRef = doc(db, "users", firebaseUser.uid)
-    const userSnap = await getDoc(userRef)
-
-    if (userSnap.exists()) {
-      const userData = userSnap.data()
-      return {
-        uid: firebaseUser.uid,
-        email: firebaseUser.email,
-        role: userData.role || "user",
-        displayName: firebaseUser.displayName || userData.displayName,
-        photoURL: firebaseUser.photoURL || userData.photoURL,
-      }
-    }
-
-    // If no additional data in Firestore, return basic info
-    return {
-      uid: firebaseUser.uid,
-      email: firebaseUser.email,
-      role: "user", // Default role
-      displayName: firebaseUser.displayName,
-      photoURL: firebaseUser.photoURL,
+  const signIn = async (email: string, password: string) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password)
+    } catch (error: any) {
+      console.error("Sign in error:", error)
+      throw new Error(error.message || "Failed to sign in")
     }
   }
 
-  const signIn = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string) => {
     try {
-      setError(null)
-      setLoading(true)
-      const auth = getAuth()
-      await signInWithEmailAndPassword(auth, email, password)
-    } catch (err: any) {
-      console.error("Sign in error:", err)
-      setError(err.message || "Failed to sign in")
-      throw err
-    } finally {
-      setLoading(false)
+      await createUserWithEmailAndPassword(auth, email, password)
+    } catch (error: any) {
+      console.error("Sign up error:", error)
+      throw new Error(error.message || "Failed to sign up")
     }
   }
 
   const signOut = async () => {
     try {
-      setError(null)
-      const auth = getAuth()
       await firebaseSignOut(auth)
-    } catch (err: any) {
-      console.error("Sign out error:", err)
-      setError(err.message || "Failed to sign out")
+    } catch (error: any) {
+      console.error("Sign out error:", error)
+      throw new Error(error.message || "Failed to sign out")
     }
   }
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        error,
-        signIn,
-        signOut,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>{children}</AuthContext.Provider>
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext)
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider")
+  }
+  return context
 }

@@ -4,23 +4,31 @@ import { useState, useEffect } from "react"
 import { Sun, Moon } from "lucide-react"
 
 export default function ThemeSwitcher() {
-  const [theme, setTheme] = useState("light")
+  // Don't set initial state on server
+  const [theme, setTheme] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
 
   // Only run on client side
   useEffect(() => {
+    // Mark as mounted first
     setMounted(true)
-    // Get initial theme from localStorage or default to light
+
+    // Then get the theme from localStorage
     const savedTheme = localStorage.getItem("theme") || "light"
     setTheme(savedTheme)
 
     // Apply theme class to document
-    document.documentElement.classList.remove("light", "dark")
-    document.documentElement.classList.add(savedTheme)
+    if (savedTheme === "dark") {
+      document.documentElement.classList.add("dark")
+    } else {
+      document.documentElement.classList.remove("dark")
+    }
   }, [])
 
   // Handle theme toggle
   const toggleTheme = () => {
+    if (!mounted) return
+
     const newTheme = theme === "light" ? "dark" : "light"
     setTheme(newTheme)
 
@@ -28,12 +36,17 @@ export default function ThemeSwitcher() {
     localStorage.setItem("theme", newTheme)
 
     // Apply theme class to document
-    document.documentElement.classList.remove("light", "dark")
-    document.documentElement.classList.add(newTheme)
+    if (newTheme === "dark") {
+      document.documentElement.classList.add("dark")
+    } else {
+      document.documentElement.classList.remove("dark")
+    }
   }
 
   // Don't render anything until mounted (to avoid hydration mismatch)
-  if (!mounted) return null
+  if (!mounted) {
+    return <div className="w-8 h-8" aria-hidden="true" />
+  }
 
   return (
     <button

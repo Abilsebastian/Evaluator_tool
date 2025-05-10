@@ -1,36 +1,38 @@
 import type React from "react"
-import "./globals.css"
 import type { Metadata } from "next"
-import { Inter, Poppins } from "next/font/google"
-import ClientAppWrapper from "@/components/client-app-wrapper"
+import { Inter } from "next/font/google"
+import "./globals.css"
+import { AuthProvider } from "@/lib/auth-context"
+import { LanguageProvider } from "@/lib/language-context"
+import Header from "@/components/header"
+import Footer from "@/components/footer"
 
-// Load Inter font
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-inter",
-})
-
-// Load Poppins font
-const poppins = Poppins({
-  weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-poppins",
-})
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 
 export const metadata: Metadata = {
-  title: "LAPAS Evaluator Tool",
+  title: "Project Evaluator | LAPAS",
   description:
-    "A web application to evaluate and display the results in a systematic way with less input from clients.",
+    "A web application to evaluate projects in a systematic way with less input from clients, made for LAPAS.",
     generator: 'v0.dev'
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode
+}>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${poppins.variable}`}>
-      <body className={inter.className}>
-        <ClientAppWrapper>{children}</ClientAppWrapper>
+    <html lang="en" className={inter.variable}>
+      <body className="min-h-screen bg-background text-foreground">
+        <AuthProvider>
+          <LanguageProvider>
+            <div className="flex flex-col min-h-screen">
+              <Header />
+              <main className="flex-1 w-full pt-16">{children}</main>
+              <Footer />
+            </div>
+          </LanguageProvider>
+        </AuthProvider>
       </body>
     </html>
   )

@@ -1,12 +1,11 @@
 "use client"
 
 import React from "react"
-
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { db } from "@/lib/firebase-config"
 import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore"
-import { Save, AlertCircle, ArrowLeft } from "lucide-react"
+import { Save, AlertCircle, ArrowLeft, CheckCircle } from "lucide-react"
 
 interface Criterion {
   description: string
@@ -57,6 +56,8 @@ export default function EvaluationForm({ user }: EvaluationFormProps) {
   const [success, setSuccess] = useState(false)
   const [evaluatorRole, setEvaluatorRole] = useState<string | null>(null)
   const [evaluationStatus, setEvaluationStatus] = useState<"pending" | "in_progress" | "completed">("pending")
+  const [completedEvaluations, setCompletedEvaluations] = useState<number>(0)
+  const [totalEvaluators, setTotalEvaluators] = useState<number>(0)
   const router = useRouter()
 
   useEffect(() => {
@@ -68,6 +69,15 @@ export default function EvaluationForm({ user }: EvaluationFormProps) {
           const data = snapshot.data() as ProjectData
           setProjectData(data)
 
+          // Count evaluators and completed evaluations
+          const evaluators = data.evaluators || {}
+          const evaluations = data.evaluations || {}
+
+          setTotalEvaluators(Object.keys(evaluators).length)
+          setCompletedEvaluations(
+            Object.values(evaluations).filter((evaluation) => evaluation.status === "completed").length,
+          )
+
           // Find the evaluator role for the current user
           if (user?.uid) {
             const evaluators = data.evaluators || {}
@@ -78,24 +88,28 @@ export default function EvaluationForm({ user }: EvaluationFormProps) {
                 // Get evaluation status
                 const evaluations = data.evaluations || {}
                 const userEvaluation = evaluations[role]
+
                 if (userEvaluation) {
                   setEvaluationStatus(userEvaluation.status || "pending")
 
                   // Initialize ratings and justifications from saved data
-                  if (userEvaluation.ratings) {
+                  // Only use saved ratings if the evaluation is in progress or completed
+                  if (userEvaluation.ratings && userEvaluation.status !== "pending") {
                     setRatings(userEvaluation.ratings)
                   } else {
-                    initializeRatings(data.evaluationTable)
+                    // For new or pending evaluations, initialize all ratings to 0
+                    initializeRatingsToZero(data.evaluationTable)
                   }
 
-                  if (userEvaluation.justifications) {
+                  if (userEvaluation.justifications && userEvaluation.status !== "pending") {
                     setJustifications(userEvaluation.justifications)
                   } else {
-                    initializeJustifications(data.evaluationTable)
+                    initializeJustificationsToEmpty(data.evaluationTable)
                   }
                 } else {
-                  initializeRatings(data.evaluationTable)
-                  initializeJustifications(data.evaluationTable)
+                  // For new evaluations, initialize all ratings to 0
+                  initializeRatingsToZero(data.evaluationTable)
+                  initializeJustificationsToEmpty(data.evaluationTable)
                 }
                 break
               }
@@ -104,8 +118,8 @@ export default function EvaluationForm({ user }: EvaluationFormProps) {
 
           // If no role found or not initialized yet
           if (!evaluatorRole && user?.role === "admin") {
-            initializeRatings(data.evaluationTable)
-            initializeJustifications(data.evaluationTable)
+            initializeRatingsToZero(data.evaluationTable)
+            initializeJustificationsToEmpty(data.evaluationTable)
           }
         }
       } catch (error) {
@@ -115,21 +129,23 @@ export default function EvaluationForm({ user }: EvaluationFormProps) {
       }
     }
 
-    const initializeRatings = (table: Section[]) => {
+    // Initialize all ratings to 0 regardless of what's in the evaluation table
+    const initializeRatingsToZero = (table: Section[]) => {
       const initial: Record<string, number> = {}
       table.forEach((section, i) => {
         section.criteria.forEach((criterion, j) => {
-          initial[`${i}-${j}`] = criterion.rating || 0
+          initial[`${i}-${j}`] = 0 // Always start with 0
         })
       })
       setRatings(initial)
     }
 
-    const initializeJustifications = (table: Section[]) => {
+    // Initialize all justifications to empty strings
+    const initializeJustificationsToEmpty = (table: Section[]) => {
       const initialJustifications: Record<string, string> = {}
       table.forEach((section, i) => {
         section.criteria.forEach((criterion, j) => {
-          initialJustifications[`${i}-${j}`] = criterion.justification || ""
+          initialJustifications[`${i}-${j}`] = "" // Always start with empty string
         })
       })
       setJustifications(initialJustifications)
@@ -201,7 +217,17 @@ export default function EvaluationForm({ user }: EvaluationFormProps) {
 
       setEvaluationStatus("completed")
       setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+
+      // Increment completed evaluations count
+      setCompletedEvaluations((prev) => prev + 1)
+
+      setTimeout(() => {
+        setSuccess(false)
+        // Redirect to dashboard if all evaluations are complete
+        if (completedEvaluations + 1 >= 3) {
+          router.push("/landing")
+        }
+      }, 3000)
     } catch (error) {
       console.error("Submission failed:", error)
       alert("Failed to submit.")
@@ -273,6 +299,34 @@ export default function EvaluationForm({ user }: EvaluationFormProps) {
     )
   }
 
+  // Check if all evaluations are complete
+  const allEvaluationsComplete = completedEvaluations >= 3
+
+  // Check if this evaluation is already complete
+  const isEvaluationComplete = evaluationStatus === "completed"
+
+  // Show message if project is already complete
+  if (allEvaluationsComplete && !isEvaluationComplete) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md flex items-start">
+          <CheckCircle className="h-5 w-5 mr-2 mt-0.5" />
+          <div>
+            <p>This project has already received all required evaluations.</p>
+            <p className="mt-2">You can view the results in the dashboard.</p>
+          </div>
+        </div>
+        <button
+          onClick={() => router.push("/landing")}
+          className="mt-4 flex items-center gap-2 text-blue-600 hover:text-blue-800"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>Return to Dashboard</span>
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="bg-white rounded-lg shadow-md p-6">
@@ -299,6 +353,9 @@ export default function EvaluationForm({ user }: EvaluationFormProps) {
             >
               <span className="capitalize">{evaluationStatus.replace("_", " ")}</span>
             </div>
+
+            {/* Evaluator progress */}
+            <div className="text-sm text-gray-600">{completedEvaluations}/3 evaluations completed</div>
 
             {success && (
               <div className="bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm flex items-center">

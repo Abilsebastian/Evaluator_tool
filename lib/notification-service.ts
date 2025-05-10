@@ -1,58 +1,59 @@
-import { collection, addDoc, serverTimestamp } from "firebase/firestore"
-import { getFirebaseDb } from "@/lib/firebase-config"
+import type { Notification } from "./notification-context"
 
-interface CreateNotificationParams {
-  userId: string
-  title: string
-  message: string
-  link?: string
-  type?: "info" | "success" | "warning" | "error"
+// Mock notifications for testing
+const mockNotifications: Notification[] = [
+  {
+    id: "1",
+    title: "Welcome",
+    message: "Welcome to the LAPAS Evaluation Tool",
+    type: "info",
+    timestamp: new Date(),
+    read: false,
+  },
+  {
+    id: "2",
+    title: "New Project",
+    message: "You have been assigned to a new project",
+    type: "success",
+    timestamp: new Date(Date.now() - 3600000), // 1 hour ago
+    read: true,
+  },
+]
+
+// Mock function to get notifications
+export function getNotifications(): Notification[] {
+  return [...mockNotifications]
 }
 
-export const createNotification = async ({ userId, title, message, link, type = "info" }: CreateNotificationParams) => {
-  try {
-    const db = getFirebaseDb()
-    if (!db) throw new Error("Database not initialized")
+// Mock function to subscribe to notifications
+export function onNotificationsChange(callback: (notifications: Notification[]) => void) {
+  // Initially call with mock data
+  callback(getNotifications())
 
-    const notificationsRef = collection(db, "notifications")
-
-    await addDoc(notificationsRef, {
-      userId,
-      title,
-      message,
-      link,
-      type,
-      read: false,
-      createdAt: serverTimestamp(),
-    })
-
-    return { success: true }
-  } catch (error) {
-    console.error("Error creating notification:", error)
-    return { success: false, error }
+  // Return unsubscribe function
+  return () => {
+    // Cleanup logic would go here in a real implementation
   }
 }
 
-export const createBulkNotifications = async (notifications: CreateNotificationParams[]) => {
-  try {
-    const db = getFirebaseDb()
-    if (!db) throw new Error("Database not initialized")
-
-    const notificationsRef = collection(db, "notifications")
-
-    const promises = notifications.map((notification) =>
-      addDoc(notificationsRef, {
-        ...notification,
-        read: false,
-        createdAt: serverTimestamp(),
-      }),
-    )
-
-    await Promise.all(promises)
-
-    return { success: true }
-  } catch (error) {
-    console.error("Error creating bulk notifications:", error)
-    return { success: false, error }
+// Mock function to add a notification
+export function addNotification(notification: Omit<Notification, "id" | "timestamp" | "read">) {
+  const newNotification: Notification = {
+    ...notification,
+    id: Math.random().toString(36).substring(2, 9),
+    timestamp: new Date(),
+    read: false,
   }
+
+  mockNotifications.push(newNotification)
+  return newNotification
+}
+
+export const createNotification = async (notificationData: any) => {
+  // In a real implementation, this function would interact with a backend service
+  // to persist the notification data.
+  console.log("Creating notification:", notificationData)
+
+  // Simulate success
+  return { success: true }
 }

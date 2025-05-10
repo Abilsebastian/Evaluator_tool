@@ -1,45 +1,45 @@
 "use client"
 
-import React from "react"
-
-import { useState, useEffect, useRef } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
+import { doc, getDoc, collection, getDocs } from "firebase/firestore"
 import { db } from "@/lib/firebase-config"
-import { collection, getDocs } from "firebase/firestore"
+import { useAuth } from "@/lib/auth-context"
 import {
   BarChart,
-  PieChart,
-  ArrowLeft,
-  Filter,
-  Download,
-  ChevronDown,
-  CheckCircle,
-  Clock,
-  AlertTriangle,
-} from "lucide-react"
-import Chart from "chart.js/auto"
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+} from "recharts"
+import { ArrowLeft, Download, FileText, AlertCircle, CheckCircle, Users } from "lucide-react"
 
-interface Project {
-  id: string
+interface Criterion {
+  description: string
+  maxRating: number
+  rating: number
+  justification?: string
+}
+
+interface Section {
+  section: string
+  weight: number
+  criteria: Criterion[]
+}
+
+interface ProjectData {
   projectName: string
   projectDescription: string
-  evaluationTable: Array<{
-    section: string
-    weight: number
-    criteria: Array<{
-      description: string
-      maxRating: number
-      rating: number
-      justification?: string
-    }>
-  }>
-  evaluators: Record<
-    string,
-    {
-      email: string
-      uid: string
-    }
-  >
+  evaluationTable: Section[]
+  evaluators: Record<string, any>
   evaluations?: Record<
     string,
     {
@@ -52,764 +52,617 @@ interface Project {
   >
 }
 
-interface ResultsDashboardProps {
-  user: {
-    uid?: string
-    email?: string
-    role?: string
-  } | null
-}
-
-export default function ResultsDashboard({ user }: ResultsDashboardProps) {
+export default function ResultsDashboard() {
+  const { user } = useAuth()
   const router = useRouter()
-  const [projects, setProjects] = useState<Project[]>([])
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const searchParams = useSearchParams()
+  const projectId = searchParams.get("projectId")
+
+  const [projectData, setProjectData] = useState<ProjectData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [projectLoading, setProjectLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showFilters, setShowFilters] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [aggregatedResults, setAggregatedResults] = useState<any[]>([])
+  const [sectionScores, setSectionScores] = useState<any[]>([])
+  const [evaluatorComparison, setEvaluatorComparison] = useState<any[]>([])
+  const [overallScore, setOverallScore] = useState<number>(0)
+  const [completedEvaluations, setCompletedEvaluations] = useState<number>(0)
+  const [totalEvaluators, setTotalEvaluators] = useState<number>(0)
+  const [completedProjects, setCompletedProjects] = useState<any[]>([])
+  const [sortField, setSortField] = useState<"name" | "date" | "score">("score")
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
+  const [projectScores, setProjectScores] = useState<Record<string, number>>({})
+  const [projectsLoading, setProjectsLoading] = useState(true)
 
-  // Chart references
-  const overallScoreChartRef = useRef<HTMLCanvasElement | null>(null)
-  const overallScoreChartInstance = useRef<Chart | null>(null)
-  const sectionScoresChartRef = useRef<HTMLCanvasElement | null>(null)
-  const sectionScoresChartInstance = useRef<Chart | null>(null)
-  const evaluatorComparisonChartRef = useRef<HTMLCanvasElement | null>(null)
-  const evaluatorComparisonChartInstance = useRef<Chart | null>(null)
-  const completionStatusChartRef = useRef<HTMLCanvasElement | null>(null)
-  const completionStatusChartInstance = useRef<Chart | null>(null)
-
-  // Fetch projects from Firestore
   useEffect(() => {
-    const fetchProjects = async () => {
+    async function fetchProjectData() {
+      if (!projectId) {
+        return
+      }
+
+      setProjectLoading(true)
       try {
-        setLoading(true)
-        setError(null)
+        const projectRef = doc(db, "projects", projectId)
+        const projectSnap = await getDoc(projectRef)
 
-        const projectsCollection = collection(db, "projects")
-        const projectsSnapshot = await getDocs(projectsCollection)
-
-        const projectsList = projectsSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Project[]
-
-        setProjects(projectsList)
-
-        // If there are projects, select the first one by default
-        if (projectsList.length > 0) {
-          setSelectedProject(projectsList[0])
+        if (!projectSnap.exists()) {
+          setError("Project not found")
+          setProjectLoading(false)
+          return
         }
-      } catch (error: any) {
-        console.error("Error fetching projects:", error)
-        setError(`Error loading projects: ${error.message}`)
+
+        const data = projectSnap.data() as ProjectData
+        setProjectData(data)
+
+        // Count evaluators and completed evaluations
+        const evaluators = data.evaluators || {}
+        const evaluations = data.evaluations || {}
+
+        setTotalEvaluators(Object.keys(evaluators).length)
+        setCompletedEvaluations(
+          Object.values(evaluations).filter((evaluation) => evaluation.status === "completed").length,
+        )
+
+        // Only process results if we have 3 completed evaluations
+        const completedEvals = Object.entries(evaluations).filter(
+          ([_, evaluation]) => evaluation.status === "completed",
+        )
+
+        if (completedEvals.length >= 3) {
+          processResults(data, completedEvals)
+        } else {
+          setError("This project doesn't have all 3 evaluations completed yet")
+        }
+      } catch (err: any) {
+        console.error("Error fetching project:", err)
+        setError(`Failed to load project: ${err.message}`)
       } finally {
+        setProjectLoading(false)
+      }
+    }
+
+    function processResults(data: ProjectData, completedEvaluations: [string, any][]) {
+      // Process aggregated results
+      const evaluationTable = data.evaluationTable || []
+      let totalWeightedScore = 0
+      let totalWeight = 0
+
+      // Process section scores
+      const sectionScoresData = evaluationTable.map((section) => {
+        const criteriaCount = section.criteria.length
+        let sectionTotal = 0
+        let sectionMax = 0
+
+        section.criteria.forEach((criterion) => {
+          sectionTotal += criterion.rating || 0
+          sectionMax += criterion.maxRating || 0
+        })
+
+        const sectionScore = sectionMax > 0 ? (sectionTotal / sectionMax) * 100 : 0
+        const weightedScore = sectionScore * section.weight
+
+        totalWeightedScore += weightedScore
+        totalWeight += section.weight
+
+        return {
+          name: section.section,
+          score: Math.round(sectionScore),
+          weight: Math.round(section.weight * 100),
+          weightedScore: Math.round(weightedScore),
+        }
+      })
+
+      setSectionScores(sectionScoresData)
+
+      // Calculate overall score
+      const finalScore = totalWeight > 0 ? totalWeightedScore / totalWeight : 0
+      setOverallScore(Math.round(finalScore))
+
+      // Process criteria scores for bar chart
+      const aggregatedData = evaluationTable.flatMap((section) =>
+        section.criteria.map((criterion) => {
+          const maxScore = criterion.maxRating || 0
+          const actualScore = criterion.rating || 0
+          const percentage = maxScore > 0 ? (actualScore / maxScore) * 100 : 0
+
+          return {
+            name:
+              criterion.description.length > 30
+                ? criterion.description.substring(0, 30) + "..."
+                : criterion.description,
+            fullName: criterion.description,
+            score: Math.round(percentage),
+            actual: actualScore,
+            max: maxScore,
+            section: section.section,
+          }
+        }),
+      )
+
+      setAggregatedResults(aggregatedData)
+
+      // Process evaluator comparison data
+      const evaluatorData: Record<string, Record<string, number>> = {}
+
+      // Initialize evaluator data structure
+      completedEvaluations.forEach(([role]) => {
+        evaluatorData[role] = {}
+      })
+
+      // Fill in scores by section for each evaluator
+      evaluationTable.forEach((section, sectionIndex) => {
+        completedEvaluations.forEach(([role, evaluation]) => {
+          const ratings = evaluation.ratings || {}
+          let sectionTotal = 0
+          let sectionMax = 0
+
+          section.criteria.forEach((criterion, criterionIndex) => {
+            const key = `${sectionIndex}-${criterionIndex}`
+            const rating = ratings[key] || 0
+            sectionTotal += rating
+            sectionMax += criterion.maxRating || 0
+          })
+
+          const sectionScore = sectionMax > 0 ? (sectionTotal / sectionMax) * 100 : 0
+          evaluatorData[role][section.section] = Math.round(sectionScore)
+        })
+      })
+
+      // Transform data for radar chart
+      const comparisonData = sectionScoresData.map((section) => {
+        const result: Record<string, any> = {
+          section: section.name,
+        }
+
+        Object.entries(evaluatorData).forEach(([role, scores]) => {
+          result[role] = scores[section.name] || 0
+        })
+
+        return result
+      })
+
+      setEvaluatorComparison(comparisonData)
+    }
+
+    fetchProjectData()
+  }, [projectId])
+
+  async function calculateProjectScores(projects: any[]) {
+    const scores: Record<string, number> = {}
+
+    for (const project of projects) {
+      if (!project.evaluationTable) continue
+
+      let totalWeightedScore = 0
+      let totalWeight = 0
+
+      // Calculate overall score using the same logic as for individual projects
+      project.evaluationTable.forEach((section: any) => {
+        let sectionTotal = 0
+        let sectionMax = 0
+
+        section.criteria.forEach((criterion: any) => {
+          sectionTotal += criterion.rating || 0
+          sectionMax += criterion.maxRating || 0
+        })
+
+        const sectionScore = sectionMax > 0 ? (sectionTotal / sectionMax) * 100 : 0
+        const weightedScore = sectionScore * section.weight
+
+        totalWeightedScore += weightedScore
+        totalWeight += section.weight
+      })
+
+      const finalScore = totalWeight > 0 ? totalWeightedScore / totalWeight : 0
+      scores[project.id] = Math.round(finalScore)
+    }
+
+    return scores
+  }
+
+  function sortProjects(
+    projects: any[],
+    field: "name" | "date" | "score",
+    direction: "asc" | "desc",
+    scores: Record<string, number> = {},
+  ) {
+    const sortedProjects = [...projects]
+
+    sortedProjects.sort((a, b) => {
+      let comparison = 0
+
+      if (field === "name") {
+        comparison = a.projectName.localeCompare(b.projectName)
+      } else if (field === "date") {
+        const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt || 0)
+        const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt || 0)
+        comparison = dateB.getTime() - dateA.getTime()
+      } else if (field === "score") {
+        const scoreA = scores[a.id] || 0
+        const scoreB = scores[b.id] || 0
+        comparison = scoreB - scoreA
+      }
+
+      return direction === "asc" ? comparison * -1 : comparison
+    })
+
+    setCompletedProjects(sortedProjects)
+  }
+
+  const handleSortChange = (field: "name" | "date" | "score") => {
+    // If clicking the same field, toggle direction
+    const newDirection = field === sortField && sortDirection === "desc" ? "asc" : "desc"
+    setSortField(field)
+    setSortDirection(newDirection)
+    sortProjects(completedProjects, field, newDirection, projectScores)
+  }
+
+  useEffect(() => {
+    async function fetchCompletedProjects() {
+      setProjectsLoading(true)
+      try {
+        const projectsRef = collection(db, "projects")
+        const projectsSnapshot = await getDocs(projectsRef)
+
+        const projects = projectsSnapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          .filter((project) => {
+            // Check if project has 3 completed evaluations
+            const evaluations = project.evaluations || {}
+            const completedEvaluations = Object.values(evaluations).filter(
+              (evaluation: any) => evaluation.status === "completed",
+            ).length
+            return completedEvaluations >= 3
+          })
+
+        // Calculate scores for all projects
+        const scores = await calculateProjectScores(projects)
+        setProjectScores(scores)
+
+        // Apply initial sorting
+        sortProjects(projects, sortField, sortDirection, scores)
+      } catch (err: any) {
+        console.error("Error fetching completed projects:", err)
+      } finally {
+        setProjectsLoading(false)
         setLoading(false)
       }
     }
 
-    if (user?.role === "admin") {
-      fetchProjects()
-    }
-  }, [user])
+    fetchCompletedProjects()
+  }, [])
 
-  // Create and update charts when selected project changes
-  useEffect(() => {
-    if (selectedProject) {
-      // Clean up previous chart instances
-      if (overallScoreChartInstance.current) {
-        overallScoreChartInstance.current.destroy()
-      }
-      if (sectionScoresChartInstance.current) {
-        sectionScoresChartInstance.current.destroy()
-      }
-      if (evaluatorComparisonChartInstance.current) {
-        evaluatorComparisonChartInstance.current.destroy()
-      }
-      if (completionStatusChartInstance.current) {
-        completionStatusChartInstance.current.destroy()
-      }
-
-      // Create new charts
-      createOverallScoreChart()
-      createSectionScoresChart()
-      createEvaluatorComparisonChart()
-      createCompletionStatusChart()
-    }
-  }, [selectedProject])
-
-  // Calculate overall score for the selected project
-  const calculateOverallScore = () => {
-    if (!selectedProject || !selectedProject.evaluationTable) return 0
-
-    let totalWeightedScore = 0
-    let totalWeight = 0
-
-    selectedProject.evaluationTable.forEach((section) => {
-      const sectionWeight = section.weight
-      let sectionScore = 0
-      let totalMaxRating = 0
-
-      section.criteria.forEach((criterion) => {
-        sectionScore += criterion.rating
-        totalMaxRating += criterion.maxRating
-      })
-
-      // Calculate section score as a percentage
-      const sectionScorePercentage = totalMaxRating > 0 ? sectionScore / totalMaxRating : 0
-      totalWeightedScore += sectionScorePercentage * sectionWeight
-      totalWeight += sectionWeight
-    })
-
-    // Return overall score as a percentage
-    return totalWeight > 0 ? (totalWeightedScore / totalWeight) * 100 : 0
+  const handleSelectProject = (projectId: string) => {
+    router.push(`/results-dashboard?projectId=${projectId}`)
   }
 
-  // Calculate section scores for the selected project
-  const calculateSectionScores = () => {
-    if (!selectedProject || !selectedProject.evaluationTable) return []
-
-    return selectedProject.evaluationTable.map((section) => {
-      let sectionScore = 0
-      let totalMaxRating = 0
-
-      section.criteria.forEach((criterion) => {
-        sectionScore += criterion.rating
-        totalMaxRating += criterion.maxRating
-      })
-
-      // Calculate section score as a percentage
-      const scorePercentage = totalMaxRating > 0 ? (sectionScore / totalMaxRating) * 100 : 0
-
-      return {
-        section: section.section,
-        score: scorePercentage,
-        weight: section.weight,
-      }
-    })
+  const handleExportPDF = () => {
+    // Implement PDF export functionality
+    alert("PDF export functionality would be implemented here")
   }
 
-  // Calculate evaluator comparison data
-  const calculateEvaluatorComparison = () => {
-    if (!selectedProject || !selectedProject.evaluations) return []
-
-    const evaluatorScores: Record<string, number> = {}
-    const evaluatorData: Array<{ role: string; score: number; status: string }> = []
-
-    // Calculate score for each evaluator
-    Object.entries(selectedProject.evaluations).forEach(([role, evaluation]) => {
-      if (evaluation.ratings) {
-        let totalScore = 0
-        let totalMaxScore = 0
-
-        // Map ratings back to criteria
-        selectedProject.evaluationTable.forEach((section, sectionIndex) => {
-          section.criteria.forEach((criterion, criterionIndex) => {
-            const ratingKey = `${sectionIndex}-${criterionIndex}`
-            if (evaluation.ratings && evaluation.ratings[ratingKey] !== undefined) {
-              totalScore += evaluation.ratings[ratingKey]
-              totalMaxScore += criterion.maxRating
-            }
-          })
-        })
-
-        const scorePercentage = totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0
-        evaluatorScores[role] = scorePercentage
-
-        evaluatorData.push({
-          role,
-          score: scorePercentage,
-          status: evaluation.status,
-        })
-      } else {
-        evaluatorData.push({
-          role,
-          score: 0,
-          status: evaluation.status,
-        })
-      }
-    })
-
-    return evaluatorData
+  const handleExportCSV = () => {
+    // Implement CSV export functionality
+    alert("CSV export functionality would be implemented here")
   }
 
-  // Calculate completion status data
-  const calculateCompletionStatus = () => {
-    if (!selectedProject || !selectedProject.evaluations) {
-      return { completed: 0, inProgress: 0, pending: 0, total: 0 }
-    }
-
-    const evaluations = selectedProject.evaluations
-    let completed = 0
-    let inProgress = 0
-    let pending = 0
-
-    Object.values(evaluations).forEach((evaluation) => {
-      if (evaluation.status === "completed") {
-        completed++
-      } else if (evaluation.status === "in_progress") {
-        inProgress++
-      } else {
-        pending++
-      }
-    })
-
-    const total = completed + inProgress + pending
-
-    return {
-      completed,
-      inProgress,
-      pending,
-      total,
-    }
-  }
-
-  // Create overall score chart
-  const createOverallScoreChart = () => {
-    if (!overallScoreChartRef.current) return
-
-    const ctx = overallScoreChartRef.current.getContext("2d")
-    if (!ctx) return
-
-    const overallScore = calculateOverallScore()
-
-    overallScoreChartInstance.current = new Chart(ctx, {
-      type: "doughnut",
-      data: {
-        labels: ["Score", "Remaining"],
-        datasets: [
-          {
-            data: [overallScore, 100 - overallScore],
-            backgroundColor: ["rgba(54, 162, 235, 0.8)", "rgba(220, 220, 220, 0.3)"],
-            borderWidth: 0,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: "75%",
-        plugins: {
-          legend: {
-            display: false,
-          },
-          tooltip: {
-            callbacks: {
-              label: (context) => `Score: ${context.raw}%`,
-            },
-          },
-        },
-      },
-    })
-  }
-
-  // Create section scores chart
-  const createSectionScoresChart = () => {
-    if (!sectionScoresChartRef.current) return
-
-    const ctx = sectionScoresChartRef.current.getContext("2d")
-    if (!ctx) return
-
-    const sectionScores = calculateSectionScores()
-
-    sectionScoresChartInstance.current = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: sectionScores.map((section) => section.section),
-        datasets: [
-          {
-            label: "Section Score (%)",
-            data: sectionScores.map((section) => section.score),
-            backgroundColor: "rgba(54, 162, 235, 0.8)",
-            borderColor: "rgba(54, 162, 235, 1)",
-            borderWidth: 1,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true,
-            max: 100,
-            title: {
-              display: true,
-              text: "Score (%)",
-            },
-          },
-          x: {
-            title: {
-              display: true,
-              text: "Sections",
-            },
-          },
-        },
-        plugins: {
-          tooltip: {
-            callbacks: {
-              afterLabel: (context) => {
-                const index = context.dataIndex
-                return `Weight: ${(sectionScores[index].weight * 100).toFixed(1)}%`
-              },
-            },
-          },
-        },
-      },
-    })
-  }
-
-  // Create evaluator comparison chart
-  const createEvaluatorComparisonChart = () => {
-    if (!evaluatorComparisonChartRef.current) return
-
-    const ctx = evaluatorComparisonChartRef.current.getContext("2d")
-    if (!ctx) return
-
-    const evaluatorData = calculateEvaluatorComparison()
-
-    evaluatorComparisonChartInstance.current = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: evaluatorData.map((data) => data.role),
-        datasets: [
-          {
-            label: "Evaluator Score (%)",
-            data: evaluatorData.map((data) => data.score),
-            backgroundColor: evaluatorData.map((data) => {
-              if (data.status === "completed") return "rgba(72, 187, 120, 0.8)"
-              if (data.status === "in_progress") return "rgba(237, 137, 54, 0.8)"
-              return "rgba(160, 174, 192, 0.8)"
-            }),
-            borderColor: evaluatorData.map((data) => {
-              if (data.status === "completed") return "rgba(72, 187, 120, 1)"
-              if (data.status === "in_progress") return "rgba(237, 137, 54, 1)"
-              return "rgba(160, 174, 192, 1)"
-            }),
-            borderWidth: 1,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true,
-            max: 100,
-            title: {
-              display: true,
-              text: "Score (%)",
-            },
-          },
-          x: {
-            title: {
-              display: true,
-              text: "Evaluators",
-            },
-          },
-        },
-        plugins: {
-          tooltip: {
-            callbacks: {
-              afterLabel: (context) => {
-                const index = context.dataIndex
-                return `Status: ${evaluatorData[index].status.replace("_", " ")}`
-              },
-            },
-          },
-        },
-      },
-    })
-  }
-
-  // Create completion status chart
-  const createCompletionStatusChart = () => {
-    if (!completionStatusChartRef.current) return
-
-    const ctx = completionStatusChartRef.current.getContext("2d")
-    if (!ctx) return
-
-    const statusData = calculateCompletionStatus()
-
-    completionStatusChartInstance.current = new Chart(ctx, {
-      type: "pie",
-      data: {
-        labels: ["Completed", "In Progress", "Pending"],
-        datasets: [
-          {
-            data: [statusData.completed, statusData.inProgress, statusData.pending],
-            backgroundColor: ["rgba(72, 187, 120, 0.8)", "rgba(237, 137, 54, 0.8)", "rgba(160, 174, 192, 0.8)"],
-            borderColor: ["rgba(72, 187, 120, 1)", "rgba(237, 137, 54, 1)", "rgba(160, 174, 192, 1)"],
-            borderWidth: 1,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: "bottom",
-          },
-        },
-      },
-    })
-  }
-
-  // Export results as CSV
-  const exportResults = () => {
-    if (!selectedProject) return
-
-    // Prepare data for CSV
-    const rows = [
-      ["Project Name", selectedProject.projectName],
-      ["Project Description", selectedProject.projectDescription],
-      ["Overall Score", `${calculateOverallScore().toFixed(2)}%`],
-      [],
-      ["Section", "Weight", "Score (%)"],
-    ]
-
-    // Add section scores
-    const sectionScores = calculateSectionScores()
-    sectionScores.forEach((section) => {
-      rows.push([section.section, (section.weight * 100).toFixed(1) + "%", section.score.toFixed(2) + "%"])
-    })
-
-    // Add evaluator data
-    rows.push([])
-    rows.push(["Evaluator", "Score (%)", "Status"])
-
-    const evaluatorData = calculateEvaluatorComparison()
-    evaluatorData.forEach((data) => {
-      rows.push([data.role, data.score.toFixed(2) + "%", data.status.replace("_", " ")])
-    })
-
-    // Convert to CSV
-    const csvContent = rows.map((row) => row.join(",")).join("\n")
-
-    // Create and download file
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.setAttribute("href", url)
-    link.setAttribute("download", `${selectedProject.projectName}_results.csv`)
-    link.style.visibility = "hidden"
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
-  // Handle project selection
-  const handleProjectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const projectId = e.target.value
-    const project = projects.find((p) => p.id === projectId) || null
-    setSelectedProject(project)
-  }
-
-  // Filter projects by status
-  const filteredProjects = projects.filter((project) => {
-    if (statusFilter === "all") return true
-
-    if (!project.evaluations) return false
-
-    // Check if any evaluator has the selected status
-    return Object.values(project.evaluations).some((evaluation) => evaluation.status === statusFilter)
-  })
-
+  // Show loading state while fetching projects
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">{error}</div>
+      <div className="container py-8 flex justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-        <div className="flex items-center mb-4 md:mb-0">
-          <button
-            onClick={() => router.push("/admin-dashboard")}
-            className="flex items-center text-gray-600 hover:text-gray-900 mr-4"
-          >
-            <ArrowLeft className="h-5 w-5 mr-1" />
-            <span>Back</span>
-          </button>
-          <h2 className="text-2xl font-bold text-gray-800">Evaluation Results Dashboard</h2>
-        </div>
+    <div className="container py-8">
+      {/* Project List Section */}
+      {!projectId && (
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <h1 className="text-2xl md:text-3xl font-bold">Completed Project Results</h1>
 
-        <div className="flex flex-col md:flex-row gap-3">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-          >
-            <Filter className="h-4 w-4 mr-2" />
-            <span>Filters</span>
-            <ChevronDown className={`h-4 w-4 ml-2 transform ${showFilters ? "rotate-180" : ""}`} />
-          </button>
-
-          <button
-            onClick={exportResults}
-            disabled={!selectedProject}
-            className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-green-300"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            <span>Export Results</span>
-          </button>
-        </div>
-      </div>
-
-      {showFilters && (
-        <div className="bg-gray-50 p-4 rounded-md mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
-                Filter by Status
-              </label>
-              <select
-                id="status-filter"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-              </select>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-muted-foreground">Sort by:</span>
+              <div className="flex border rounded-md overflow-hidden">
+                <button
+                  className={`px-3 py-1.5 text-sm ${
+                    sortField === "name" ? "bg-primary text-white" : "bg-background hover:bg-muted"
+                  }`}
+                  onClick={() => handleSortChange("name")}
+                >
+                  Name {sortField === "name" && (sortDirection === "asc" ? "↑" : "↓")}
+                </button>
+                <button
+                  className={`px-3 py-1.5 text-sm border-l ${
+                    sortField === "date" ? "bg-primary text-white" : "bg-background hover:bg-muted"
+                  }`}
+                  onClick={() => handleSortChange("date")}
+                >
+                  Date {sortField === "date" && (sortDirection === "asc" ? "↑" : "↓")}
+                </button>
+                <button
+                  className={`px-3 py-1.5 text-sm border-l ${
+                    sortField === "score" ? "bg-primary text-white" : "bg-background hover:bg-muted"
+                  }`}
+                  onClick={() => handleSortChange("score")}
+                >
+                  Score {sortField === "score" && (sortDirection === "asc" ? "↑" : "↓")}
+                </button>
+              </div>
             </div>
           </div>
+
+          {projectsLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+          ) : completedProjects.length > 0 ? (
+            <div className="card overflow-hidden">
+              <div className="p-4 md:p-6 border-b border-border">
+                <h2 className="text-xl font-semibold">Select a project to view detailed results</h2>
+              </div>
+              <div className="divide-y divide-border">
+                {completedProjects.map((project) => (
+                  <div
+                    key={project.id}
+                    className="p-4 md:p-6 hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={() => handleSelectProject(project.id)}
+                  >
+                    <div className="flex items-start">
+                      <div className="h-10 w-10 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mr-4">
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                          <h3 className="text-lg font-medium">{project.projectName}</h3>
+                          {projectScores[project.id] !== undefined && (
+                            <div
+                              className={`text-sm font-medium px-2 py-0.5 rounded-full ${
+                                projectScores[project.id] >= 80
+                                  ? "bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-300"
+                                  : projectScores[project.id] >= 60
+                                    ? "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
+                                    : "bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300"
+                              }`}
+                            >
+                              Score: {projectScores[project.id]}%
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {project.projectDescription?.substring(0, 100)}
+                          {project.projectDescription?.length > 100 ? "..." : ""}
+                        </p>
+                        <div className="flex items-center mt-2 text-sm text-muted-foreground">
+                          <Users className="h-4 w-4 mr-1" />
+                          <span>
+                            {
+                              Object.values(project.evaluations || {}).filter(
+                                (evaluation: any) => evaluation.status === "completed",
+                              ).length
+                            }{" "}
+                            evaluations
+                          </span>
+                          <span className="mx-2">•</span>
+                          <span>
+                            Created:{" "}
+                            {project.createdAt?.toDate?.()
+                              ? new Date(project.createdAt.toDate()).toLocaleDateString()
+                              : new Date(project.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="card p-6 text-center">
+              <p className="text-muted-foreground">No completed projects found.</p>
+            </div>
+          )}
         </div>
       )}
 
-      {filteredProjects.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-md p-6 text-center">
-          <p className="text-gray-500">No projects found matching the selected filters.</p>
-        </div>
-      ) : (
+      {/* Existing Project Detail Content - only show if projectId is provided */}
+      {projectId && (
         <>
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <label htmlFor="project-select" className="block text-sm font-medium text-gray-700 mb-2">
-              Select Project
-            </label>
-            <select
-              id="project-select"
-              value={selectedProject?.id || ""}
-              onChange={handleProjectChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            >
-              {filteredProjects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.projectName}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {selectedProject && (
+          {projectLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+          ) : error ? (
+            <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 p-4 rounded-md flex items-start">
+              <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium">{error}</p>
+                {completedEvaluations < 3 && (
+                  <p className="mt-2">
+                    This project has {completedEvaluations} of 3 required evaluations completed. Results will be
+                    available when all evaluations are submitted.
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : projectData ? (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <div className="flex items-center mb-4">
-                    <BarChart className="h-5 w-5 text-blue-600 mr-2" />
-                    <h3 className="text-lg font-medium text-gray-800">Overall Score</h3>
+              {/* Header */}
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+                <div>
+                  <button
+                    onClick={() => {
+                      router.push("/results-dashboard", undefined, { shallow: false })
+                    }}
+                    className="group flex items-center gap-2 px-3 py-2 rounded-md bg-muted/50 hover:bg-muted active:bg-muted/80 transition-colors duration-200 mb-4"
+                    aria-label="Back to all results"
+                  >
+                    <ArrowLeft className="h-4 w-4 text-primary group-hover:translate-x-[-2px] transition-transform duration-200" />
+                    <span className="font-medium">Back to All Results</span>
+                  </button>
+                  <h1 className="text-2xl md:text-3xl font-bold">{projectData.projectName}</h1>
+                  <p className="text-muted-foreground mt-1">{projectData.projectDescription}</p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button onClick={handleExportPDF} className="btn btn-outline btn-sm flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    <span>Export PDF</span>
+                  </button>
+                  <button onClick={handleExportCSV} className="btn btn-outline btn-sm flex items-center gap-2">
+                    <Download className="h-4 w-4" />
+                    <span>Export CSV</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Status and summary */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="card p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Overall Score</p>
+                      <h3 className="text-3xl font-bold mt-1">{overallScore}%</h3>
+                    </div>
+                    <div
+                      className={`h-12 w-12 rounded-full flex items-center justify-center ${
+                        overallScore >= 80
+                          ? "bg-green-100 dark:bg-green-900/20"
+                          : overallScore >= 60
+                            ? "bg-amber-100 dark:bg-amber-900/20"
+                            : "bg-red-100 dark:bg-red-900/20"
+                      }`}
+                    >
+                      <span
+                        className={`text-lg font-bold ${
+                          overallScore >= 80 ? "text-green-500" : overallScore >= 60 ? "text-amber-500" : "text-red-500"
+                        }`}
+                      >
+                        {overallScore >= 80
+                          ? "A"
+                          : overallScore >= 70
+                            ? "B"
+                            : overallScore >= 60
+                              ? "C"
+                              : overallScore >= 50
+                                ? "D"
+                                : "F"}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-col items-center">
-                    <div className="relative h-48 w-48">
-                      <canvas ref={overallScoreChartRef}></canvas>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-3xl font-bold text-gray-800">{calculateOverallScore().toFixed(1)}%</span>
+                </div>
+
+                <div className="card p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Evaluation Status</p>
+                      <div className="flex items-center mt-1">
+                        <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                        <h3 className="text-xl font-bold">Complete</h3>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-600 mt-4">Overall weighted score across all sections</p>
+                    <div className="h-12 w-12 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
+                      <CheckCircle className="h-6 w-6 text-green-500" />
+                    </div>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <div className="flex items-center mb-4">
-                    <PieChart className="h-5 w-5 text-blue-600 mr-2" />
-                    <h3 className="text-lg font-medium text-gray-800">Completion Status</h3>
-                  </div>
-                  <div className="h-48">
-                    <canvas ref={completionStatusChartRef}></canvas>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-6 mb-6">
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <div className="flex items-center mb-4">
-                    <BarChart className="h-5 w-5 text-blue-600 mr-2" />
-                    <h3 className="text-lg font-medium text-gray-800">Section Scores</h3>
-                  </div>
-                  <div className="h-64">
-                    <canvas ref={sectionScoresChartRef}></canvas>
+                <div className="card p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Evaluators</p>
+                      <div className="flex items-center mt-1">
+                        <h3 className="text-xl font-bold">{completedEvaluations}/3 Completed</h3>
+                      </div>
+                    </div>
+                    <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center">
+                      <Users className="h-6 w-6 text-primary" />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-6 mb-6">
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <div className="flex items-center mb-4">
-                    <BarChart className="h-5 w-5 text-blue-600 mr-2" />
-                    <h3 className="text-lg font-medium text-gray-800">Evaluator Comparison</h3>
-                  </div>
-                  <div className="h-64">
-                    <canvas ref={evaluatorComparisonChartRef}></canvas>
-                  </div>
+              {/* Section scores */}
+              <div className="card p-6 mb-8">
+                <h2 className="text-xl font-semibold mb-4">Section Scores</h2>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={sectionScores} margin={{ top: 20, right: 30, left: 20, bottom: 70 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" angle={-45} textAnchor="end" height={70} tick={{ fontSize: 12 }} />
+                      <YAxis domain={[0, 100]} />
+                      <Tooltip
+                        formatter={(value, name) => [`${value}%`, name === "score" ? "Score" : "Weight"]}
+                        labelFormatter={(label) => `Section: ${label}`}
+                      />
+                      <Legend />
+                      <Bar dataKey="score" name="Score (%)" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="weight" name="Weight (%)" fill="#93c5fd" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <div className="flex items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-800">Detailed Evaluation Results</h3>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-gray-50">
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 border-b">Section</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 border-b">Criteria</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 border-b w-24">
-                          Max Rating
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 border-b w-24">
-                          Avg. Rating
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 border-b w-24">Score %</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedProject.evaluationTable?.map((section, sectionIndex) => (
-                        <React.Fragment key={sectionIndex}>
-                          <tr className="bg-gray-100">
-                            <td colSpan={5} className="px-4 py-2 font-medium text-gray-700">
-                              {section.section} (Weight: {(section.weight * 100).toFixed(1)}%)
-                            </td>
-                          </tr>
-                          {section.criteria.map((criterion, criterionIndex) => {
-                            // Calculate average rating from all evaluators
-                            let totalRating = criterion.rating
-                            let evaluatorCount = 1
-
-                            if (selectedProject.evaluations) {
-                              Object.values(selectedProject.evaluations).forEach((evaluation) => {
-                                if (
-                                  evaluation.ratings &&
-                                  evaluation.ratings[`${sectionIndex}-${criterionIndex}`] !== undefined
-                                ) {
-                                  totalRating += evaluation.ratings[`${sectionIndex}-${criterionIndex}`]
-                                  evaluatorCount++
-                                }
-                              })
-                            }
-
-                            const avgRating = evaluatorCount > 0 ? totalRating / evaluatorCount : 0
-                            const scorePercentage =
-                              criterion.maxRating > 0 ? (avgRating / criterion.maxRating) * 100 : 0
-
-                            return (
-                              <tr key={criterionIndex} className="hover:bg-gray-50">
-                                <td className="px-4 py-3 border-b text-sm"></td>
-                                <td className="px-4 py-3 border-b text-sm">{criterion.description}</td>
-                                <td className="px-4 py-3 border-b text-sm text-center">{criterion.maxRating}</td>
-                                <td className="px-4 py-3 border-b text-sm text-center">{avgRating.toFixed(1)}</td>
-                                <td className="px-4 py-3 border-b text-sm text-center">
-                                  <div className="flex items-center justify-center">
-                                    <span>{scorePercentage.toFixed(1)}%</span>
-                                    <div className="ml-2 h-2 w-16 bg-gray-200 rounded-full overflow-hidden">
-                                      <div
-                                        className="h-full bg-blue-500"
-                                        style={{ width: `${scorePercentage}%` }}
-                                      ></div>
-                                    </div>
-                                  </div>
-                                </td>
-                              </tr>
-                            )
-                          })}
-                        </React.Fragment>
-                      ))}
-                    </tbody>
-                  </table>
+              {/* Evaluator comparison */}
+              <div className="card p-6 mb-8">
+                <h2 className="text-xl font-semibold mb-4">Evaluator Comparison</h2>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart outerRadius={90} data={evaluatorComparison}>
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="section" />
+                      <PolarRadiusAxis domain={[0, 100]} />
+                      {Object.keys(projectData.evaluators || {})
+                        .slice(0, 3)
+                        .map((role, index) => (
+                          <Radar
+                            key={role}
+                            name={role}
+                            dataKey={role}
+                            stroke={index === 0 ? "#3b82f6" : index === 1 ? "#10b981" : "#f59e0b"}
+                            fill={index === 0 ? "#3b82f6" : index === 1 ? "#10b981" : "#f59e0b"}
+                            fillOpacity={0.3}
+                          />
+                        ))}
+                      <Legend />
+                      <Tooltip />
+                    </RadarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-                <div className="flex items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-800">Evaluator Status</h3>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-gray-50">
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 border-b">Role</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 border-b">Email</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 border-b">Status</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 border-b">Last Updated</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 border-b">Submitted</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedProject.evaluators &&
-                        Object.entries(selectedProject.evaluators).map(([role, evaluator]) => {
-                          const evaluation = selectedProject.evaluations?.[role]
-                          const status = evaluation?.status || "pending"
-
-                          return (
-                            <tr key={role} className="hover:bg-gray-50">
-                              <td className="px-4 py-3 border-b text-sm font-medium">{role}</td>
-                              <td className="px-4 py-3 border-b text-sm">{evaluator.email}</td>
-                              <td className="px-4 py-3 border-b text-sm">
-                                <div className="flex items-center">
-                                  {status === "completed" ? (
-                                    <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                                  ) : status === "in_progress" ? (
-                                    <Clock className="h-4 w-4 text-yellow-500 mr-1" />
-                                  ) : (
-                                    <AlertTriangle className="h-4 w-4 text-gray-400 mr-1" />
-                                  )}
-                                  <span
-                                    className={`
-                                  ${status === "completed" ? "text-green-600" : ""}
-                                  ${status === "in_progress" ? "text-yellow-600" : ""}
-                                  ${status === "pending" ? "text-gray-600" : ""}
-                                `}
-                                  >
-                                    {status.replace("_", " ")}
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3 border-b text-sm">
-                                {evaluation?.lastUpdated
-                                  ? new Date(evaluation.lastUpdated.toDate()).toLocaleString()
-                                  : "N/A"}
-                              </td>
-                              <td className="px-4 py-3 border-b text-sm">
-                                {evaluation?.submittedAt
-                                  ? new Date(evaluation.submittedAt.toDate()).toLocaleString()
-                                  : "N/A"}
-                              </td>
-                            </tr>
-                          )
-                        })}
-                    </tbody>
-                  </table>
+              {/* Detailed criteria scores */}
+              <div className="card p-6">
+                <h2 className="text-xl font-semibold mb-4">Detailed Criteria Scores</h2>
+                <div className="h-[500px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={aggregatedResults}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
+                      layout="vertical"
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" domain={[0, 100]} />
+                      <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 12 }} />
+                      <Tooltip
+                        formatter={(value) => [`${value}%`, "Score"]}
+                        labelFormatter={(label) =>
+                          aggregatedResults.find((item) => item.name === label)?.fullName || label
+                        }
+                      />
+                      <Legend />
+                      <Bar dataKey="score" name="Score (%)" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </>
-          )}
+          ) : null}
         </>
       )}
     </div>

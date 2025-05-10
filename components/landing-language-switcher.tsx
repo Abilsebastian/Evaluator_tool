@@ -1,15 +1,16 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Globe, Check, ChevronDown } from "lucide-react"
-import { useLanguage } from "@/lib/language-context"
-import type { Language } from "@/lib/translations"
+import { Globe, Check, ChevronDown, RefreshCw } from "lucide-react"
 import { createPortal } from "react-dom"
+import type { Language } from "@/lib/translations"
 
-export default function LanguageSwitcher() {
-  const { language, setLanguage } = useLanguage()
+export default function LandingLanguageSwitcher() {
+  const [language, setLanguageState] = useState<Language>("en")
   const [isOpen, setIsOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [isChanging, setIsChanging] = useState(false)
+  const [lastChanged, setLastChanged] = useState<Date | null>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const [dropdownStyles, setDropdownStyles] = useState({
     top: 0,
@@ -19,6 +20,28 @@ export default function LanguageSwitcher() {
 
   useEffect(() => {
     setMounted(true)
+
+    // Try to get the language from localStorage
+    try {
+      const savedLanguage = localStorage.getItem("language") as Language
+      if (savedLanguage && (savedLanguage === "en" || savedLanguage === "lv")) {
+        setLanguageState(savedLanguage)
+
+        // Check if this was a recent change (within last 5 seconds)
+        const lastChangedTime = localStorage.getItem("language_changed_at")
+        if (lastChangedTime) {
+          const changeTime = new Date(lastChangedTime)
+          const now = new Date()
+          if (now.getTime() - changeTime.getTime() < 5000) {
+            setLastChanged(changeTime)
+            // Clear the timestamp after 3 seconds
+            setTimeout(() => setLastChanged(null), 3000)
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error reading language from localStorage:", error)
+    }
 
     // Close dropdown when clicking outside
     const handleClickOutside = (event: MouseEvent) => {
@@ -64,18 +87,32 @@ export default function LanguageSwitcher() {
   }
 
   const changeLanguage = (lang: Language) => {
-    // Direct localStorage update for immediate effect
+    if (lang === language) {
+      setIsOpen(false)
+      return
+    }
+
+    setIsChanging(true)
+
+    // Update local state
+    setLanguageState(lang)
+
+    // Save to localStorage with timestamp
     try {
+      const now = new Date()
       localStorage.setItem("language", lang)
+      localStorage.setItem("language_changed_at", now.toISOString())
+      setLastChanged(now)
     } catch (error) {
       console.error("Error saving language to localStorage:", error)
     }
 
-    // Close dropdown
     setIsOpen(false)
 
-    // Force page reload to apply language change
-    window.location.reload()
+    // Force a hard reload to ensure all components update
+    setTimeout(() => {
+      window.location.reload()
+    }, 300)
   }
 
   if (!mounted) return null
@@ -84,15 +121,30 @@ export default function LanguageSwitcher() {
     <div className="relative">
       <button
         ref={buttonRef}
-        className="flex items-center space-x-1 p-2 rounded-md transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 dark:active:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+        className={`flex items-center space-x-1 p-2 rounded-md transition-all duration-300 
+          ${isChanging ? "bg-blue-100 dark:bg-blue-900" : "hover:bg-gray-100 dark:hover:bg-gray-700"} 
+          active:bg-gray-200 dark:active:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40
+          ${lastChanged ? "ring-2 ring-green-500 dark:ring-green-400" : ""}`}
         onClick={toggleDropdown}
         aria-label="Change language"
         aria-expanded={isOpen}
         aria-haspopup="true"
+        disabled={isChanging}
       >
-        <Globe size={20} className="text-blue-600 dark:text-blue-400" />
+        {isChanging ? (
+          <RefreshCw size={20} className="text-blue-600 dark:text-blue-400 animate-spin" />
+        ) : (
+          <Globe size={20} className="text-blue-600 dark:text-blue-400" />
+        )}
         <span className="text-sm font-medium">{language === "en" ? "EN" : "LV"}</span>
         <ChevronDown size={16} className={`transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
+
+        {lastChanged && (
+          <span className="absolute -top-1 -right-1 flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+          </span>
+        )}
       </button>
 
       {isOpen &&
@@ -105,8 +157,6 @@ export default function LanguageSwitcher() {
               top: `${dropdownStyles.top}px`,
               left: `${dropdownStyles.left}px`,
               width: `${dropdownStyles.width}px`,
-              maxHeight: "90vh",
-              overflowY: "auto",
             }}
           >
             <button
@@ -114,7 +164,13 @@ export default function LanguageSwitcher() {
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                changeLanguage("en")
+                // Direct approach without using the changeLanguage function
+                try {
+                  localStorage.setItem("language", "en")
+                  window.location.href = window.location.pathname
+                } catch (error) {
+                  console.error("Error changing language:", error)
+                }
               }}
             >
               <span>English</span>
@@ -125,7 +181,13 @@ export default function LanguageSwitcher() {
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                changeLanguage("lv")
+                // Direct approach without using the changeLanguage function
+                try {
+                  localStorage.setItem("language", "lv")
+                  window.location.href = window.location.pathname
+                } catch (error) {
+                  console.error("Error changing language:", error)
+                }
               }}
             >
               <span>Latviešu</span>

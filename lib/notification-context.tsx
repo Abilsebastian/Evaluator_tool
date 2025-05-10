@@ -1,148 +1,60 @@
 "use client"
 
-import type React from "react"
-import { createContext, useContext, useEffect, useState } from "react"
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
-  doc,
-  updateDoc,
-  type Timestamp,
-  limit,
-} from "firebase/firestore"
-import { getFirebaseDb } from "@/lib/firebase-config"
-import { useAuth } from "@/lib/auth-context"
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { onNotificationsChange } from "./notification-service"
 
 export interface Notification {
   id: string
-  userId: string
   title: string
   message: string
-  link?: string
-  read: boolean
-  createdAt: Timestamp
   type: "info" | "success" | "warning" | "error"
+  timestamp: Date
+  read: boolean
 }
 
 interface NotificationContextType {
   notifications: Notification[]
   unreadCount: number
-  markAsRead: (notificationId: string) => Promise<void>
-  markAllAsRead: () => Promise<void>
-  loading: boolean
-  error: string | null
+  markAsRead: (id: string) => void
+  markAllAsRead: () => void
+  clearNotification: (id: string) => void
+  clearAllNotifications: () => void
 }
 
-const NotificationContext = createContext<NotificationContextType>({
-  notifications: [],
-  unreadCount: 0,
-  markAsRead: async () => {},
-  markAllAsRead: async () => {},
-  loading: true,
-  error: null,
-})
+const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
 
-export const useNotifications = () => useContext(NotificationContext)
-
-export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const { user } = useAuth()
+  const unreadCount = notifications.filter((n) => !n.read).length
 
   useEffect(() => {
-    if (!user) {
-      setNotifications([])
-      setLoading(false)
-      return
+    // Subscribe to notifications
+    const unsubscribe = onNotificationsChange((newNotifications) => {
+      setNotifications(newNotifications)
+    })
+
+    return () => {
+      unsubscribe()
     }
+  }, [])
 
-    setLoading(true)
-
-    try {
-      const db = getFirebaseDb()
-      if (!db) {
-        setError("Database not initialized")
-        setLoading(false)
-        return
-      }
-
-      // Create a query against the collection
-      const notificationsRef = collection(db, "notifications")
-      const q = query(
-        notificationsRef,
-        where("userId", "==", user.uid),
-        orderBy("createdAt", "desc"),
-        limit(50), // Limit to the 50 most recent notifications
-      )
-
-      // Set up real-time listener
-      const unsubscribe = onSnapshot(
-        q,
-        (querySnapshot) => {
-          const notificationsList: Notification[] = []
-          querySnapshot.forEach((doc) => {
-            notificationsList.push({ id: doc.id, ...doc.data() } as Notification)
-          })
-          setNotifications(notificationsList)
-          setLoading(false)
-          setError(null)
-        },
-        (err) => {
-          console.error("Error fetching notifications:", err)
-          setError("Failed to load notifications")
-          setLoading(false)
-        },
-      )
-
-      // Clean up listener on unmount
-      return () => unsubscribe()
-    } catch (err) {
-      console.error("Error setting up notifications listener:", err)
-      setError("Failed to set up notifications")
-      setLoading(false)
-    }
-  }, [user])
-
-  const markAsRead = async (notificationId: string) => {
-    try {
-      const db = getFirebaseDb()
-      if (!db) throw new Error("Database not initialized")
-
-      const notificationRef = doc(db, "notifications", notificationId)
-      await updateDoc(notificationRef, {
-        read: true,
-      })
-    } catch (err) {
-      console.error("Error marking notification as read:", err)
-      setError("Failed to update notification")
-    }
+  const markAsRead = (id: string) => {
+    setNotifications((prev) =>
+      prev.map((notification) => (notification.id === id ? { ...notification, read: true } : notification)),
+    )
   }
 
-  const markAllAsRead = async () => {
-    try {
-      const db = getFirebaseDb()
-      if (!db) throw new Error("Database not initialized")
-
-      // Update all unread notifications for this user
-      const promises = notifications
-        .filter((notification) => !notification.read)
-        .map((notification) => {
-          const notificationRef = doc(db, "notifications", notification.id)
-          return updateDoc(notificationRef, { read: true })
-        })
-
-      await Promise.all(promises)
-    } catch (err) {
-      console.error("Error marking all notifications as read:", err)
-      setError("Failed to update notifications")
-    }
+  const markAllAsRead = () => {
+    setNotifications((prev) => prev.map((notification) => ({ ...notification, read: true })))
   }
 
-  const unreadCount = notifications.filter((notification) => !notification.read).length
+  const clearNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((notification) => notification.id !== id))
+  }
+
+  const clearAllNotifications = () => {
+    setNotifications([])
+  }
 
   return (
     <NotificationContext.Provider
@@ -151,11 +63,19 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         unreadCount,
         markAsRead,
         markAllAsRead,
-        loading,
-        error,
+        clearNotification,
+        clearAllNotifications,
       }}
     >
       {children}
     </NotificationContext.Provider>
   )
+}
+
+export function useNotifications() {
+  const context = useContext(NotificationContext)
+  if (context === undefined) {
+    throw new Error("useNotifications must be used within a NotificationProvider")
+  }
+  return context
 }

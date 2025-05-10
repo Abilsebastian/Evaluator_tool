@@ -68,7 +68,7 @@ export default function ResultsDashboardPage() {
   return (
     <>
       <Header user={user} onLogout={handleLogout} />
-      <main className="flex-1">
+      <main className="flex-1 pt-16">
         {user?.role === "admin" ? (
           <ResultsDashboard user={user} />
         ) : (
