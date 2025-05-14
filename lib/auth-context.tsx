@@ -1,14 +1,14 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
-import { auth, db } from "@/lib/firebase-config"
 import {
+  onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
-  onAuthStateChanged,
 } from "firebase/auth"
 import { doc, getDoc } from "firebase/firestore"
+import { getFirebaseAuth, getFirebaseDb } from "@/lib/firebase-config"
 
 type User = {
   uid: string
@@ -31,9 +31,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === "undefined") return
+
+    // Get Firebase auth
+    const auth = getFirebaseAuth()
+    if (!auth) {
+      console.error("Firebase auth is not available")
+      setLoading(false)
+      return
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
+          // Get Firebase db
+          const db = getFirebaseDb()
+          if (!db) {
+            console.error("Firebase db is not available")
+            setUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+            })
+            setLoading(false)
+            return
+          }
+
           // Get user role from Firestore
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
           const userData = userDoc.exists() ? userDoc.data() : {}
@@ -60,6 +83,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
+    const auth = getFirebaseAuth()
+    if (!auth) {
+      throw new Error("Firebase auth is not available")
+    }
+
     try {
       await signInWithEmailAndPassword(auth, email, password)
     } catch (error: any) {
@@ -69,6 +97,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signUp = async (email: string, password: string) => {
+    const auth = getFirebaseAuth()
+    if (!auth) {
+      throw new Error("Firebase auth is not available")
+    }
+
     try {
       await createUserWithEmailAndPassword(auth, email, password)
     } catch (error: any) {
@@ -78,8 +111,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
+    const auth = getFirebaseAuth()
+    if (!auth) {
+      throw new Error("Firebase auth is not available")
+    }
+
     try {
       await firebaseSignOut(auth)
+      // Clear any cached user data
+      setUser(null)
     } catch (error: any) {
       console.error("Sign out error:", error)
       throw new Error(error.message || "Failed to sign out")
@@ -96,3 +136,5 @@ export function useAuth() {
   }
   return context
 }
+
+export default AuthProvider

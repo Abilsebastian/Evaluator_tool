@@ -1,28 +1,20 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect, useRef } from "react"
-import { createPortal } from "react-dom"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter, usePathname } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { Menu, X, User, LogOut } from "lucide-react"
+import { getAuth, signOut } from "firebase/auth"
+import { initializeApp } from "firebase/app"
+import { firebaseConfig } from "@/lib/firebase-config"
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const { user, signOut } = useAuth()
-  const router = useRouter()
+  const { user } = useAuth()
   const pathname = usePathname()
   const [mounted, setMounted] = useState(false)
   const [isDuplicate, setIsDuplicate] = useState(false)
-  const userButtonRef = useRef<HTMLButtonElement>(null)
-  const [dropdownStyles, setDropdownStyles] = useState({
-    top: 0,
-    left: 0,
-    width: 192,
-  })
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -37,49 +29,6 @@ export default function Header() {
     }
   }, [])
 
-  // Update dropdown position when it opens or window resizes
-  useEffect(() => {
-    const updatePosition = () => {
-      if (userButtonRef.current && userMenuOpen) {
-        const rect = userButtonRef.current.getBoundingClientRect()
-        const scrollTop = window.scrollY || document.documentElement.scrollTop
-
-        // Calculate position to ensure dropdown is visible
-        const rightEdge = rect.right
-        const windowWidth = window.innerWidth
-
-        // Position dropdown to the left if it would overflow right edge
-        const left = rightEdge - 192 > 0 ? rightEdge - 192 : 10
-
-        setDropdownStyles({
-          top: rect.bottom + scrollTop,
-          left: left,
-          width: Math.min(192, windowWidth - 20),
-        })
-      }
-    }
-
-    // Close dropdown when clicking outside
-    const handleClickOutside = (event: MouseEvent) => {
-      if (userButtonRef.current && !userButtonRef.current.contains(event.target as Node)) {
-        setUserMenuOpen(false)
-      }
-    }
-
-    if (userMenuOpen) {
-      updatePosition()
-      document.addEventListener("mousedown", handleClickOutside)
-      window.addEventListener("resize", updatePosition)
-      window.addEventListener("scroll", updatePosition)
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-      window.removeEventListener("resize", updatePosition)
-      window.removeEventListener("scroll", updatePosition)
-    }
-  }, [userMenuOpen])
-
   // Check if we're on an auth page
   const authPages = ["/signin", "/register", "/reset-password"]
   const isAuthPage = authPages.includes(pathname)
@@ -90,16 +39,21 @@ export default function Header() {
     return null
   }
 
-  const handleSignOut = async (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-
+  // Direct sign out function that doesn't rely on context
+  const handleDirectSignOut = async () => {
     try {
-      await signOut()
-      setUserMenuOpen(false)
+      // Initialize Firebase directly
+      const app = initializeApp(firebaseConfig)
+      const auth = getAuth(app)
+
+      // Sign out
+      await signOut(auth)
+
+      // Force redirect to sign in page
       window.location.href = "/signin"
     } catch (error) {
       console.error("Error signing out:", error)
+      alert("Failed to sign out. Please try again.")
     }
   }
 
@@ -190,42 +144,20 @@ export default function Header() {
           {/* User menu */}
           <div className="flex items-center">
             {user ? (
-              <div className="relative">
-                <button
-                  ref={userButtonRef}
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center space-x-2 focus:outline-none focus:ring-2 focus:ring-purple-500/40 rounded-md p-1"
-                >
-                  <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
-                    <User className="h-4 w-4 text-purple-700 dark:text-purple-400" />
-                  </div>
-                  <span className="hidden md:block text-sm font-medium">{user.email?.split("@")[0]}</span>
-                </button>
+              <div className="flex items-center">
+                <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center mr-2">
+                  <User className="h-4 w-4 text-purple-700 dark:text-purple-400" />
+                </div>
+                <span className="hidden md:block text-sm font-medium mr-4">{user.email?.split("@")[0]}</span>
 
-                {userMenuOpen &&
-                  mounted &&
-                  typeof document !== "undefined" &&
-                  createPortal(
-                    <div
-                      className="fixed rounded-md shadow-lg z-[9999] bg-card border border-border overflow-hidden"
-                      style={{
-                        top: `${dropdownStyles.top}px`,
-                        left: `${dropdownStyles.left}px`,
-                        width: `${dropdownStyles.width}px`,
-                      }}
-                    >
-                      <div className="py-1">
-                        <button
-                          onClick={handleSignOut}
-                          className="w-full text-left px-4 py-2 text-sm hover:bg-muted flex items-center text-destructive"
-                        >
-                          <LogOut className="h-4 w-4 mr-2" />
-                          Sign out
-                        </button>
-                      </div>
-                    </div>,
-                    document.body,
-                  )}
+                {/* Direct sign out button */}
+                <button
+                  onClick={handleDirectSignOut}
+                  className="px-4 py-2 rounded-md text-sm font-medium bg-red-600 hover:bg-red-700 text-white flex items-center"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign out
+                </button>
               </div>
             ) : (
               <Link
@@ -308,7 +240,7 @@ export default function Header() {
                     Help
                   </Link>
                   <button
-                    onClick={handleSignOut}
+                    onClick={handleDirectSignOut}
                     className="px-3 py-2 rounded-md text-sm font-medium text-left hover:bg-muted text-destructive flex items-center"
                   >
                     <LogOut className="h-4 w-4 mr-2" />

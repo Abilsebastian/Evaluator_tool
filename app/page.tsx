@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { ArrowRight, ClipboardCheck, Users, BarChart3, CheckCircle } from "lucide-react"
+import { ArrowRight, ClipboardCheck, Users, BarChart3, Star, Shield, Zap } from "lucide-react"
 import LandingLanguageSwitcher from "@/components/landing-language-switcher"
 import type { Language } from "@/lib/translations"
 
@@ -10,7 +10,7 @@ import type { Language } from "@/lib/translations"
 const translations = {
   en: {
     title: "Project Evaluator",
-    subtitle: "A streamlined platform for evaluating projects with a systematic approach, made for LAPAS.",
+    subtitle: "A streamlined platform for evaluating projects with a systematic approach.",
     signIn: "Sign In",
     register: "Register",
     howItWorks: "How It Works",
@@ -36,14 +36,21 @@ const translations = {
     roleBasedTitle: "Role-Based Access",
     roleBasedDesc: "Different permissions for administrators and evaluators to maintain evaluation integrity.",
     ctaTitle: "Ready to Get Started?",
-    ctaDesc: "Join LAPAS's evaluation platform to streamline your project assessment process.",
+    ctaDesc: "Join our evaluation platform to streamline your project assessment process.",
     signInNow: "Sign In Now",
     allRightsReserved: "All rights reserved.",
-    poweredBy: "Powered by",
+    heroTagline: "Evaluate Projects with Precision and Fairness",
+    heroSubtitle: "A collaborative platform that brings structure and transparency to the project evaluation process.",
+    featureTitle1: "Fair & Balanced",
+    featureDesc1: "Three-evaluator system ensures unbiased assessment of all projects.",
+    featureTitle2: "Comprehensive Analytics",
+    featureDesc2: "Detailed visualizations and insights from aggregated evaluations.",
+    featureTitle3: "Streamlined Process",
+    featureDesc3: "Structured workflow from project creation to final assessment.",
   },
   lv: {
     title: "Projektu Vērtētājs",
-    subtitle: "Efektīva platforma projektu novērtēšanai ar sistemātisku pieeju, izstrādāta LAPAS.",
+    subtitle: "Efektīva platforma projektu novērtēšanai ar sistemātisku pieeju.",
     signIn: "Ieiet",
     register: "Reģistrēties",
     howItWorks: "Kā Tas Darbojas",
@@ -70,10 +77,17 @@ const translations = {
     roleBasedTitle: "Uz Lomām Balstīta Piekļuve",
     roleBasedDesc: "Dažādas atļaujas administratoriem un vērtētājiem, lai saglabātu novērtēšanas integritāti.",
     ctaTitle: "Gatavi Sākt?",
-    ctaDesc: "Pievienojieties LAPAS novērtēšanas platformai, lai optimizētu projektu novērtēšanas procesu.",
+    ctaDesc: "Pievienojieties mūsu novērtēšanas platformai, lai optimizētu projektu novērtēšanas procesu.",
     signInNow: "Ieiet Tagad",
     allRightsReserved: "Visas tiesības aizsargātas.",
-    poweredBy: "Nodrošina",
+    heroTagline: "Novērtējiet Projektus ar Precizitāti un Godīgumu",
+    heroSubtitle: "Sadarbības platforma, kas projektu novērtēšanas procesam piešķir struktūru un caurskatāmību.",
+    featureTitle1: "Godīgs un Līdzsvarots",
+    featureDesc1: "Trīs vērtētāju sistēma nodrošina objektīvu visu projektu novērtējumu.",
+    featureTitle2: "Visaptveroša Analītika",
+    featureDesc2: "Detalizētas vizualizācijas un ieskati no apkopotiem novērtējumiem.",
+    featureTitle3: "Optimizēts Process",
+    featureDesc3: "Strukturēta darba gaita no projekta izveides līdz galīgajam novērtējumam.",
   },
 }
 
@@ -100,172 +114,148 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden">
-      {/* Left vertical accent bar - inspired by LAPAS website */}
-      <div className="hidden md:block absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-b from-orange-600 to-red-600 z-10"></div>
-
-      {/* Background curved lines - inspired by LAPAS website */}
-      <div className="absolute left-0 top-0 w-full h-full opacity-10 pointer-events-none">
-        <div className="absolute left-0 bottom-0 w-1/2 h-3/4 border-t-[100px] border-l-[100px] rounded-tl-[300px] border-gray-300"></div>
-        <div className="absolute left-[10%] bottom-[10%] w-1/2 h-3/4 border-t-[100px] border-l-[100px] rounded-tl-[300px] border-gray-300"></div>
-        <div className="absolute left-[20%] bottom-[20%] w-1/2 h-3/4 border-t-[100px] border-l-[100px] rounded-tl-[300px] border-gray-300"></div>
-      </div>
-
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
       {/* Header with Language Switcher */}
-      <header className="bg-white dark:bg-gray-800 py-4 border-b border-gray-200 dark:border-gray-700 relative z-20">
-        <div className="container mx-auto px-4 md:pl-12 flex justify-between items-center">
-          <div className="flex items-center">
-            {/* LAPAS-inspired logo */}
-            <div className="flex items-center">
-              <div className="w-10 h-10 relative">
-                <svg viewBox="0 0 40 40" className="w-full h-full text-purple-700 dark:text-purple-500">
-                  <path
-                    fill="currentColor"
-                    d="M20,0 C25,0 30,5 30,15 C30,25 25,30 20,30 C15,30 10,25 10,15 C10,5 15,0 20,0 Z M20,5 C17.5,5 15,8 15,15 C15,22 17.5,25 20,25 C22.5,25 25,22 25,15 C25,8 22.5,5 20,5 Z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M15,20 L5,30 L5,35 L15,25 L15,20 Z M25,20 L35,30 L35,35 L25,25 L25,20 Z"
-                  />
-                </svg>
-              </div>
-              <span className="ml-2 text-xl font-bold text-purple-700 dark:text-purple-500">LAPAS</span>
+      <header className="bg-white dark:bg-gray-900 py-4 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
+        <div className="container mx-auto px-4 flex justify-between items-center">
+          <div className="text-xl font-bold text-purple-600 dark:text-purple-500">{t.title}</div>
+          <div className="flex items-center space-x-4">
+            <LandingLanguageSwitcher />
+            <div className="hidden sm:flex space-x-2">
+              <Link
+                href="/signin"
+                className="px-4 py-2 rounded-md text-sm font-medium border border-purple-600 text-purple-600 hover:bg-purple-50 dark:border-purple-500 dark:text-purple-500 dark:hover:bg-purple-900/30 transition-colors"
+              >
+                {t.signIn}
+              </Link>
+              <Link
+                href="/register"
+                className="px-4 py-2 rounded-md text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-700 transition-colors"
+              >
+                {t.register}
+              </Link>
             </div>
-            <div className="h-6 mx-4 border-l border-gray-300 dark:border-gray-600"></div>
-            <div className="text-lg font-medium text-gray-800 dark:text-gray-200">{t.title}</div>
           </div>
-          <LandingLanguageSwitcher />
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-b from-purple-50 to-white dark:from-gray-900 dark:to-gray-800 py-16 md:py-24 relative z-20">
-        <div className="container mx-auto px-4 md:pl-12 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-700 to-indigo-600 dark:from-purple-500 dark:to-indigo-400">
-            {t.title}
-          </h1>
-          <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">{t.subtitle}</p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/signin" className="btn btn-primary btn-lg">
-              {t.signIn}
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
-            <Link href="/register" className="btn btn-outline btn-lg">
-              {t.register}
-            </Link>
+      <section className="py-16 md:py-24 relative overflow-hidden">
+        {/* Background Elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-200 dark:bg-purple-900/20 rounded-full opacity-50 blur-3xl"></div>
+          <div className="absolute top-60 -left-20 w-60 h-60 bg-indigo-200 dark:bg-indigo-900/20 rounded-full opacity-50 blur-3xl"></div>
+        </div>
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-500 dark:to-indigo-400">
+              {t.heroTagline}
+            </h1>
+            <p className="text-lg md:text-xl text-gray-700 dark:text-gray-300 mb-10 max-w-3xl mx-auto">
+              {t.heroSubtitle}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                href="/signin"
+                className="px-6 py-3 rounded-lg text-base font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors shadow-lg hover:shadow-xl hover:shadow-purple-500/20"
+              >
+                {t.signIn}
+                <ArrowRight className="ml-2 h-5 w-5 inline" />
+              </Link>
+              <Link
+                href="/register"
+                className="px-6 py-3 rounded-lg text-base font-medium border border-gray-300 dark:border-gray-700 hover:border-purple-500 dark:hover:border-purple-500 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                {t.register}
+              </Link>
+            </div>
+          </div>
+
+          {/* Feature Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-20">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow border border-gray-100 dark:border-gray-700">
+              <div className="bg-purple-100 dark:bg-purple-900/30 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                <Star className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">{t.featureTitle1}</h3>
+              <p className="text-gray-600 dark:text-gray-300">{t.featureDesc1}</p>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow border border-gray-100 dark:border-gray-700">
+              <div className="bg-indigo-100 dark:bg-indigo-900/30 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                <BarChart3 className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">{t.featureTitle2}</h3>
+              <p className="text-gray-600 dark:text-gray-300">{t.featureDesc2}</p>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow border border-gray-100 dark:border-gray-700">
+              <div className="bg-blue-100 dark:bg-blue-900/30 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                <Zap className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">{t.featureTitle3}</h3>
+              <p className="text-gray-600 dark:text-gray-300">{t.featureDesc3}</p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* How It Works Section */}
-      <section className="py-16 bg-white dark:bg-gray-800 relative z-20">
-        <div className="container mx-auto px-4 md:pl-12">
-          <h2 className="text-3xl font-bold text-center mb-12">{t.howItWorks}</h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {/* Step 1 */}
-            <div className="bg-purple-50 dark:bg-gray-700 rounded-lg p-6 text-center transition-transform hover:translate-y-[-5px]">
-              <div className="bg-purple-100 dark:bg-purple-900 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <ClipboardCheck className="h-8 w-8 text-purple-700 dark:text-purple-400" />
-              </div>
-              <h3 className="text-xl font-semibold mb-3">{t.step1Title}</h3>
-              <p className="text-gray-600 dark:text-gray-300">{t.step1Desc}</p>
-            </div>
-
-            {/* Step 2 */}
-            <div className="bg-purple-50 dark:bg-gray-700 rounded-lg p-6 text-center transition-transform hover:translate-y-[-5px]">
-              <div className="bg-purple-100 dark:bg-purple-900 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <Users className="h-8 w-8 text-purple-700 dark:text-purple-400" />
-              </div>
-              <h3 className="text-xl font-semibold mb-3">{t.step2Title}</h3>
-              <p className="text-gray-600 dark:text-gray-300">{t.step2Desc}</p>
-            </div>
-
-            {/* Step 3 */}
-            <div className="bg-purple-50 dark:bg-gray-700 rounded-lg p-6 text-center transition-transform hover:translate-y-[-5px]">
-              <div className="bg-purple-100 dark:bg-purple-900 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="h-8 w-8 text-purple-700 dark:text-purple-400" />
-              </div>
-              <h3 className="text-xl font-semibold mb-3">{t.step3Title}</h3>
-              <p className="text-gray-600 dark:text-gray-300">{t.step3Desc}</p>
-            </div>
-
-            {/* Step 4 */}
-            <div className="bg-purple-50 dark:bg-gray-700 rounded-lg p-6 text-center transition-transform hover:translate-y-[-5px]">
-              <div className="bg-purple-100 dark:bg-purple-900 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <BarChart3 className="h-8 w-8 text-purple-700 dark:text-purple-400" />
-              </div>
-              <h3 className="text-xl font-semibold mb-3">{t.step4Title}</h3>
-              <p className="text-gray-600 dark:text-gray-300">{t.step4Desc}</p>
-            </div>
+      <section className="py-16 bg-gray-50 dark:bg-gray-900/50">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">{t.howItWorks}</h2>
+            <div className="h-1 w-20 bg-purple-600 mx-auto"></div>
           </div>
 
-          {/* Workflow Diagram */}
-          <div className="mt-16 bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-            <h3 className="text-2xl font-semibold text-center mb-8">{t.evaluationProcess}</h3>
-            <div className="relative">
-              {/* Workflow line */}
-              <div className="hidden md:block absolute top-1/2 left-0 right-0 h-1 bg-purple-200 dark:bg-purple-800 transform -translate-y-1/2 z-0"></div>
+          <div className="relative">
+            {/* Connecting line */}
+            <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-0.5 bg-gray-200 dark:bg-gray-700 transform -translate-y-1/2"></div>
 
-              {/* Workflow steps */}
-              <div className="flex flex-col md:flex-row justify-between relative z-10">
-                <div className="flex flex-col items-center mb-8 md:mb-0">
-                  <div className="bg-white dark:bg-gray-800 border-2 border-purple-500 rounded-full w-12 h-12 flex items-center justify-center mb-2">
-                    <span className="text-purple-700 dark:text-purple-400 font-bold">1</span>
-                  </div>
-                  <p className="text-center font-medium">{t.projectCreation}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-100 dark:border-gray-700 text-center">
+                <div className="bg-purple-100 dark:bg-purple-900/30 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 relative">
+                  <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-purple-600 text-white text-xs flex items-center justify-center font-bold">
+                    1
+                  </span>
+                  <ClipboardCheck className="h-8 w-8 text-purple-600 dark:text-purple-400" />
                 </div>
-
-                <div className="flex flex-col items-center mb-8 md:mb-0">
-                  <div className="bg-white dark:bg-gray-800 border-2 border-purple-500 rounded-full w-12 h-12 flex items-center justify-center mb-2">
-                    <span className="text-purple-700 dark:text-purple-400 font-bold">2</span>
-                  </div>
-                  <p className="text-center font-medium">{t.evaluatorAssignment}</p>
-                </div>
-
-                <div className="flex flex-col items-center mb-8 md:mb-0">
-                  <div className="bg-white dark:bg-gray-800 border-2 border-purple-500 rounded-full w-12 h-12 flex items-center justify-center mb-2">
-                    <span className="text-purple-700 dark:text-purple-400 font-bold">3</span>
-                  </div>
-                  <p className="text-center font-medium">{t.evaluationSubmission}</p>
-                </div>
-
-                <div className="flex flex-col items-center mb-8 md:mb-0">
-                  <div className="bg-white dark:bg-gray-800 border-2 border-purple-500 rounded-full w-12 h-12 flex items-center justify-center mb-2">
-                    <span className="text-purple-700 dark:text-purple-400 font-bold">4</span>
-                  </div>
-                  <p className="text-center font-medium">{t.resultsAnalysis}</p>
-                </div>
-
-                <div className="flex flex-col items-center">
-                  <div className="bg-white dark:bg-gray-800 border-2 border-purple-500 rounded-full w-12 h-12 flex items-center justify-center mb-2">
-                    <span className="text-purple-700 dark:text-purple-400 font-bold">5</span>
-                  </div>
-                  <p className="text-center font-medium">{t.projectCompletion}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Key Features */}
-          <div className="mt-16">
-            <h3 className="text-2xl font-semibold text-center mb-8">{t.keyFeatures}</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-6 shadow-sm">
-                <h4 className="text-lg font-semibold mb-3 text-purple-700 dark:text-purple-400">
-                  {t.threeEvaluatorTitle}
-                </h4>
-                <p className="text-gray-600 dark:text-gray-300">{t.threeEvaluatorDesc}</p>
+                <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">{t.step1Title}</h3>
+                <p className="text-gray-600 dark:text-gray-300">{t.step1Desc}</p>
               </div>
 
-              <div className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-6 shadow-sm">
-                <h4 className="text-lg font-semibold mb-3 text-purple-700 dark:text-purple-400">{t.resultsTitle}</h4>
-                <p className="text-gray-600 dark:text-gray-300">{t.resultsDesc}</p>
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-100 dark:border-gray-700 text-center">
+                <div className="bg-indigo-100 dark:bg-indigo-900/30 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 relative">
+                  <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">
+                    2
+                  </span>
+                  <Users className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">{t.step2Title}</h3>
+                <p className="text-gray-600 dark:text-gray-300">{t.step2Desc}</p>
               </div>
 
-              <div className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-6 shadow-sm">
-                <h4 className="text-lg font-semibold mb-3 text-purple-700 dark:text-purple-400">{t.roleBasedTitle}</h4>
-                <p className="text-gray-600 dark:text-gray-300">{t.roleBasedDesc}</p>
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-100 dark:border-gray-700 text-center">
+                <div className="bg-blue-100 dark:bg-blue-900/30 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 relative">
+                  <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">
+                    3
+                  </span>
+                  <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                </div>
+                <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">{t.step3Title}</h3>
+                <p className="text-gray-600 dark:text-gray-300">{t.step3Desc}</p>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-100 dark:border-gray-700 text-center">
+                <div className="bg-green-100 dark:bg-green-900/30 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 relative">
+                  <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-green-600 text-white text-xs flex items-center justify-center font-bold">
+                    4
+                  </span>
+                  <BarChart3 className="h-8 w-8 text-green-600 dark:text-green-400" />
+                </div>
+                <h3 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">{t.step4Title}</h3>
+                <p className="text-gray-600 dark:text-gray-300">{t.step4Desc}</p>
               </div>
             </div>
           </div>
@@ -273,35 +263,47 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-purple-50 dark:bg-gray-700 relative z-20">
-        <div className="container mx-auto px-4 md:pl-12 text-center">
+      <section className="py-16 bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
+        <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-6">{t.ctaTitle}</h2>
-          <p className="text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">{t.ctaDesc}</p>
-          <Link href="/signin" className="btn btn-primary btn-lg">
+          <p className="text-lg mb-8 max-w-2xl mx-auto">{t.ctaDesc}</p>
+          <Link
+            href="/signin"
+            className="px-8 py-4 rounded-lg text-base font-medium bg-white text-purple-600 hover:bg-gray-100 transition-colors shadow-lg hover:shadow-xl"
+          >
             {t.signInNow}
-            <ArrowRight className="ml-2 h-5 w-5" />
+            <ArrowRight className="ml-2 h-5 w-5 inline" />
           </Link>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-8 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 relative z-20">
-        <div className="container mx-auto px-4 md:pl-12 flex flex-col md:flex-row justify-between items-center">
-          <div className="flex items-center mb-4 md:mb-0">
-            <p className="text-gray-600 dark:text-gray-300">
-              © {new Date().getFullYear()} {t.poweredBy}{" "}
-              <span className="font-bold text-purple-700 dark:text-purple-400">LAPAS</span>. {t.allRightsReserved}
+      <footer className="py-8 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <p className="text-gray-600 dark:text-gray-400 mb-4 md:mb-0">
+              © {new Date().getFullYear()} {t.title}. {t.allRightsReserved}
             </p>
-          </div>
-          <div className="flex items-center">
-            <a
-              href="https://www.lapas.lv"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-purple-700 dark:text-purple-400 hover:underline"
-            >
-              www.lapas.lv
-            </a>
+            <div className="flex items-center space-x-4">
+              <Link
+                href="/signin"
+                className="text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-500"
+              >
+                {t.signIn}
+              </Link>
+              <Link
+                href="/register"
+                className="text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-500"
+              >
+                {t.register}
+              </Link>
+              <Link
+                href="/help"
+                className="text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-500"
+              >
+                Help
+              </Link>
+            </div>
           </div>
         </div>
       </footer>

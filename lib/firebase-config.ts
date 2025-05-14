@@ -1,4 +1,6 @@
-import { initializeApp, getApps } from "firebase/app"
+"\"use client"
+
+import { initializeApp, getApps, getApp } from "firebase/app"
 import { getAuth } from "firebase/auth"
 import { getFirestore } from "firebase/firestore"
 
@@ -13,28 +15,47 @@ export const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 }
 
-// Initialize Firebase only if it hasn't been initialized already
-// This prevents multiple initializations in development mode with React strict mode
-let app
-let auth
-let db
+// Only initialize Firebase on the client side
+let firebaseApp
+let firebaseAuth
+let firebaseDb
 
-if (typeof window !== "undefined" && !getApps().length) {
-  try {
-    app = initializeApp(firebaseConfig)
-    auth = getAuth(app)
-    db = getFirestore(app)
-  } catch (error) {
-    console.error("Error initializing Firebase:", error)
+// Initialize Firebase lazily
+function initializeFirebase() {
+  if (typeof window === "undefined") return { app: null, auth: null, db: null }
+
+  if (!firebaseApp) {
+    try {
+      // Initialize or get the Firebase app
+      firebaseApp = !getApps().length ? initializeApp(firebaseConfig) : getApp()
+
+      // Only initialize auth and db after app is initialized
+      firebaseAuth = getAuth(firebaseApp)
+      firebaseDb = getFirestore(firebaseApp)
+    } catch (error) {
+      console.error("Error initializing Firebase:", error)
+      return { app: null, auth: null, db: null }
+    }
   }
+
+  return { app: firebaseApp, auth: firebaseAuth, db: firebaseDb }
 }
 
-export { app, auth, db }
+// Export functions to get Firebase services
+export function getFirebaseApp() {
+  const { app } = initializeFirebase()
+  return app
+}
 
-export const getFirebaseAuth = () => {
+export function getFirebaseAuth() {
+  const { auth } = initializeFirebase()
   return auth
 }
 
-export const getFirebaseDb = () => {
+export function getFirebaseDb() {
+  const { db } = initializeFirebase()
   return db
 }
+
+export const db = getFirebaseDb()
+export const auth = getFirebaseAuth()

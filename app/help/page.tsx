@@ -1,5 +1,31 @@
+"use client"
+
 import Link from "next/link"
-import { Book, HelpCircle, Mail, FileText, Video, MessageSquare, ChevronRight } from "lucide-react"
+import { HelpCircle, Download, ChevronDown, ChevronUp } from "lucide-react"
+import { useState } from "react"
+
+// FAQ component with toggle functionality
+function FAQ({ question, answer }: { question: string; answer: string }) {
+  const [isOpen, setIsOpen] = useState(false)
+
+  return (
+    <div className="border-b border-border pb-4">
+      <button
+        className="flex items-center justify-between w-full text-left py-2"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+      >
+        <h3 className="font-medium">{question}</h3>
+        {isOpen ? (
+          <ChevronUp className="h-5 w-5 text-muted-foreground" />
+        ) : (
+          <ChevronDown className="h-5 w-5 text-muted-foreground" />
+        )}
+      </button>
+      {isOpen && <div className="mt-2 text-muted-foreground">{answer}</div>}
+    </div>
+  )
+}
 
 export default function HelpPage() {
   return (
@@ -7,48 +33,18 @@ export default function HelpPage() {
       <div className="max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Help Center</h1>
 
-        <div className="card mb-8">
-          <div className="p-6">
-            <div className="flex items-center mb-4">
-              <Book className="h-6 w-6 text-primary mr-3" />
-              <h2 className="text-xl font-semibold">User Manual</h2>
-            </div>
-            <p className="text-muted-foreground mb-4">
-              Our comprehensive user manual provides detailed instructions on how to use the LAPAS Evaluator Tool.
-            </p>
-            <Link href="/user-manual" className="btn btn-primary">
-              View User Manual
-            </Link>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-8">
           <div className="card">
             <div className="p-6">
               <div className="flex items-center mb-4">
-                <FileText className="h-6 w-6 text-primary mr-3" />
-                <h2 className="text-xl font-semibold">Quick Start Guide</h2>
+                <Download className="h-6 w-6 text-primary mr-3" />
+                <h2 className="text-xl font-semibold">Product Showcase</h2>
               </div>
               <p className="text-muted-foreground mb-4">
-                Get started quickly with our step-by-step guide for new users.
+                View and download a PDF overview of the LAPAS Evaluator Tool.
               </p>
-              <Link href="/quick-start" className="btn btn-outline">
-                View Guide
-              </Link>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <Video className="h-6 w-6 text-primary mr-3" />
-                <h2 className="text-xl font-semibold">Video Tutorials</h2>
-              </div>
-              <p className="text-muted-foreground mb-4">
-                Watch our video tutorials to learn how to use the platform effectively.
-              </p>
-              <Link href="/tutorials" className="btn btn-outline">
-                Watch Tutorials
+              <Link href="/product-showcase" className="btn btn-outline">
+                View Showcase
               </Link>
             </div>
           </div>
@@ -62,54 +58,35 @@ export default function HelpPage() {
             </div>
 
             <div className="space-y-4 mt-6">
-              <div className="border-b border-border pb-4">
-                <button className="flex items-center justify-between w-full text-left">
-                  <h3 className="font-medium">How do I create a new project?</h3>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                </button>
-              </div>
+              <FAQ
+                question="How do I create a new project?"
+                answer="To create a new project, navigate to the dashboard and click on the 'Create Project' button. Fill in the required information such as project name, description, and evaluation criteria. Once completed, click 'Save' to create your project."
+              />
 
-              <div className="border-b border-border pb-4">
-                <button className="flex items-center justify-between w-full text-left">
-                  <h3 className="font-medium">How do I assign evaluators to a project?</h3>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                </button>
-              </div>
+              <FAQ
+                question="How do I assign evaluators to a project?"
+                answer="After creating a project, go to the project details page and click on 'Manage Evaluators'. You can then search for users by email or name and assign them as evaluators. Each evaluator will receive a notification about their assignment."
+              />
 
-              <div className="border-b border-border pb-4">
-                <button className="flex items-center justify-between w-full text-left">
-                  <h3 className="font-medium">How do I view evaluation results?</h3>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                </button>
-              </div>
+              <FAQ
+                question="How do I view evaluation results?"
+                answer="Once all evaluators have completed their assessments, you can view the results by going to the 'Results' tab in the main navigation. Select the project you want to view, and you'll see a comprehensive dashboard with all evaluation data and aggregated scores."
+              />
 
-              <div className="border-b border-border pb-4">
-                <button className="flex items-center justify-between w-full text-left">
-                  <h3 className="font-medium">How do I export evaluation data?</h3>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                </button>
-              </div>
-            </div>
+              <FAQ
+                question="How do I export evaluation data?"
+                answer="On the results page for any completed project, look for the 'Export' button in the top right corner. You can export the data in various formats including PDF, Excel, and CSV. The export includes all evaluation scores, comments, and aggregated results."
+              />
 
-            <Link href="/faq" className="btn btn-outline mt-6">
-              View All FAQs
-            </Link>
-          </div>
-        </div>
+              <FAQ
+                question="What happens when a project evaluation is complete?"
+                answer="When all assigned evaluators have submitted their evaluations, the project status automatically changes to 'Complete'. The project owner and all evaluators receive a notification, and the results become available in the Results dashboard."
+              />
 
-        <div className="card">
-          <div className="p-6">
-            <div className="flex items-center mb-4">
-              <MessageSquare className="h-6 w-6 text-primary mr-3" />
-              <h2 className="text-xl font-semibold">Contact Support</h2>
-            </div>
-            <p className="text-muted-foreground mb-4">Need additional help? Our support team is ready to assist you.</p>
-
-            <div className="flex items-center mt-4">
-              <Mail className="h-5 w-5 text-muted-foreground mr-2" />
-              <a href="mailto:support@lapas.lv" className="text-primary hover:underline">
-                support@lapas.lv
-              </a>
+              <FAQ
+                question="Can I modify a project after creating it?"
+                answer="Yes, you can edit project details by going to the project page and clicking 'Edit Project'. However, once evaluations have started, you can only make limited changes to avoid affecting the evaluation process."
+              />
             </div>
           </div>
         </div>
