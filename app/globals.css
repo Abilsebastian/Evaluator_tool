@@ -2,6 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Improved CSS Reset for better cross-browser compatibility */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Ensure consistent font rendering */
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -80,10 +97,41 @@
   html,
   body {
     height: 100%;
+    width: 100%;
+    font-family: var(
+      --font-sans,
+      var(
+        --font-inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        "Helvetica Neue",
+        Arial,
+        sans-serif
+      )
+    );
   }
 
   body {
     @apply bg-background text-foreground;
+    line-height: 1.5;
+  }
+
+  /* Improve font rendering in Firefox */ \
+  @-moz-document url-prefix() {
+    body {
+      font-weight: lighter;
+    }
+  }
+
+  /* Fix for Safari */
+  @supports (-webkit-touch-callout: none) {
+    body {
+      letter-spacing: -0.01em;
+    }
   }
 }
 
@@ -169,4 +217,28 @@
 
 .hover-lift:hover {
   transform: translateY(-5px);
+}
+
+/* Fix for Firefox flexbox issues */
+@-moz-document url-prefix() {
+  .flex {
+    min-height: 0;
+  }
+}
+
+/* Fix for Safari flexbox issues */
+@supports (-webkit-touch-callout: none) {
+  .flex {
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: flex;
+  }
+}
+
+/* Fix for Edge/IE flexbox issues */
+@supports (-ms-ime-align: auto) {
+  .flex {
+    display: -ms-flexbox;
+    display: flex;
+  }
 }
