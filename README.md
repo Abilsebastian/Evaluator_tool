@@ -1,30 +1,35 @@
-# evaluator tool
+# Project Evaluator
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+A modern web application for systematic project evaluation with a structured approach and aggregated results.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/abilsebastians-projects/v0-evaluator-tool)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/Mw2pHMz2oCm)
+![Project Evaluator Screenshot](/placeholder.svg?height=300&width=600&query=project%20evaluator%20dashboard%20screenshot)
 
 ## Overview
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+Project Evaluator is a specialized tool designed to streamline the project evaluation process. It enables organizations to assess projects systematically through a structured evaluation framework. The application aggregates evaluations from multiple evaluators to provide comprehensive insights into project performance.
 
-## Deployment
+## Features
 
-Your project is live at:
+- **User Authentication**: Secure login and registration system
+- **Project Management**: Create, edit, and manage evaluation projects
+- **Evaluator Assignment**: Assign specific evaluators to projects
+- **Structured Evaluation Forms**: Customizable evaluation criteria
+- **Results Dashboard**: View aggregated evaluation results
+- **Multi-language Support**: Available in English and Latvian
+- **Responsive Design**: Works on desktop and mobile devices
+- **Dark/Light Mode**: User-selectable theme preference
 
-**[https://vercel.com/abilsebastians-projects/v0-evaluator-tool](https://vercel.com/abilsebastians-projects/v0-evaluator-tool)**
+## Getting Started
 
-## Build your app
+### Prerequisites
 
-Continue building your app on:
+- Node.js 16.x or higher
+- npm or yarn
+- Firebase account
 
-**[https://v0.dev/chat/projects/Mw2pHMz2oCm](https://v0.dev/chat/projects/Mw2pHMz2oCm)**
+### Installation
 
-## How It Works
-
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/project-evaluator.git
+   cd project-evalu
